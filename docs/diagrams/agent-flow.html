@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>ИИ СКАНЕР — схема агента</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --text: #182332;
+      --border: #dce3eb;
+      --connection: #8594a6;
+      --core-background: #eaf1ff;
+      --core-border: #acc6ef;
+      --grid: #e3e9f0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: #14181e;
+        --surface: #20262e;
+        --text: #edf2f8;
+        --border: #384451;
+        --connection: #99a9bc;
+        --core-background: #233652;
+        --core-border: #496c99;
+        --grid: #29313b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--text);
+      background-color: var(--background);
+      background-image: radial-gradient(var(--grid) 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    main {
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: grid;
+      place-items: center;
+      padding: clamp(12px, 4vw, 56px);
+    }
+    .flow {
+      width: 100%;
+      max-width: 1000px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) clamp(24px, 6vw, 84px) minmax(0, 1.12fr) clamp(24px, 6vw, 84px) minmax(0, 1fr);
+      align-items: center;
+    }
+    .node {
+      min-width: 0;
+      min-height: clamp(112px, 16vw, 156px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 8px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      text-align: center;
+      font-size: clamp(14px, 2.2vw, 23px);
+      font-weight: 500;
+      line-height: 1.45;
+    }
+    .node-core {
+      background: var(--core-background);
+      border-color: var(--core-border);
+    }
+    .arrow { display: block; width: 100%; height: 24px; color: var(--connection); }
+    .arrow line, .arrow path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="flow" role="img" aria-label="Исходный PDF → Ядро агента → JSON-файл">
+      <div class="node" data-node="pdf"><span>Исходный</span><span>PDF</span></div>
+      <svg class="arrow" viewBox="0 0 84 24" preserveAspectRatio="none" aria-hidden="true"><line x1="10" y1="12" x2="73" y2="12"/><path d="M66 6 L73 12 L66 18"/></svg>
+      <div class="node node-core" data-node="agent"><span>Ядро</span><span>агента</span></div>
+      <svg class="arrow" viewBox="0 0 84 24" preserveAspectRatio="none" aria-hidden="true"><line x1="10" y1="12" x2="73" y2="12"/><path d="M66 6 L73 12 L66 18"/></svg>
+      <div class="node" data-node="json"><span>JSON-файл</span></div>
+    </div>
+  </main>
+</body>
+</html>
