@@ -74,16 +74,41 @@
     }
     .arrow { display: block; width: 100%; height: 24px; color: var(--connection); }
     .arrow line, .arrow path { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+    .json-summary {
+      grid-column: 3 / 6;
+      justify-self: end;
+      width: 100%;
+      max-width: 320px;
+      margin-top: 22px;
+      padding-left: 12px;
+      border-left: 2px solid var(--core-border);
+      font-size: clamp(12px, 1.5vw, 15px);
+      line-height: 1.5;
+    }
+    .summary-title { margin-bottom: 10px; font-weight: 500; }
+    .json-summary dl { margin: 0; }
+    .json-summary dt { font-family: Consolas, monospace; font-weight: 500; white-space: nowrap; }
+    .json-summary dd { margin: 4px 0 16px; }
+    .json-summary dd:last-child { margin-bottom: 0; }
   </style>
 </head>
 <body>
   <main>
-    <div class="flow" role="img" aria-label="Исходный PDF → Ядро агента → JSON-файл">
+    <div class="flow" role="group" aria-label="Исходный PDF → Ядро агента → JSON-файл">
       <div class="node" data-node="pdf"><span>Исходный</span><span>PDF</span></div>
       <svg class="arrow" viewBox="0 0 84 24" preserveAspectRatio="none" aria-hidden="true"><line x1="10" y1="12" x2="73" y2="12"/><path d="M66 6 L73 12 L66 18"/></svg>
       <div class="node node-core" data-node="agent"><span>Ядро</span><span>агента</span></div>
       <svg class="arrow" viewBox="0 0 84 24" preserveAspectRatio="none" aria-hidden="true"><line x1="10" y1="12" x2="73" y2="12"/><path d="M66 6 L73 12 L66 18"/></svg>
       <div class="node" data-node="json"><span>JSON-файл</span></div>
+      <div class="json-summary" aria-label="Структура JSON-файла">
+        <div class="summary-title">Структура JSON</div>
+        <dl>
+          <dt>drawing_general</dt>
+          <dd>Деталь, материал, единицы и общие требования чертежа</dd>
+          <dt>surfaces</dt>
+          <dd>Геометрия поверхностей и связи с местными требованиями</dd>
+        </dl>
+      </div>
     </div>
   </main>
 </body>
