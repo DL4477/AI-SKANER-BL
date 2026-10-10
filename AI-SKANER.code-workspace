@@ -1,0 +1,66 @@
+{
+  "folders": [{ "path": ".", "name": "ИИ СКАНЕР" }],
+  "settings": {
+    "editor.tabSize": 2,
+    "files.encoding": "utf8",
+    "files.exclude": {
+      "**/node_modules": true,
+      "**/.venv": true,
+      "**/__pycache__": true,
+    },
+    "search.exclude": { "**/pnpm-lock.yaml": true, "**/dist": true },
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Интерфейс: запустить",
+        "type": "process",
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/tools/ui.ps1",
+          "-Mode",
+          "dev",
+        ],
+        "isBackground": true,
+        "problemMatcher": [],
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+      },
+      {
+        "label": "Интерфейс: проверить сборку",
+        "type": "process",
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/tools/ui.ps1",
+          "-Mode",
+          "build",
+        ],
+        "problemMatcher": [],
+        "group": "build",
+      },
+      {
+        "label": "Интерфейс: установить зависимости",
+        "type": "process",
+        "command": "powershell.exe",
+        "args": [
+          "-NoProfile",
+          "-ExecutionPolicy",
+          "Bypass",
+          "-File",
+          "${workspaceFolder}/tools/ui.ps1",
+          "-Mode",
+          "install",
+        ],
+        "problemMatcher": [],
+      },
+    ],
+  },
+}

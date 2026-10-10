@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 560" role="img" aria-labelledby="title description">
+  <title id="title">Учебная втулка — демонстрация интерфейса</title>
+  <desc id="description">Условный эскиз для проектирования интерфейса. Четыре поверхности, без фасок. Не производственный чертёж.</desc>
+  <defs><pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse"><path d="M-1 1L1-1M0 9L9 0M8 10L10 8" stroke="#a5aebc" stroke-width="0.8"/></pattern></defs>
+  <rect width="800" height="560" fill="#fff"/>
+  <g font-family="Arial, sans-serif" fill="#283649">
+    <text x="38" y="42" font-size="15">DEMO-001 · Учебная втулка</text><text x="38" y="64" font-size="11" fill="#657387">Условный эскиз для проектирования · все размеры в мм</text>
+    <g fill="url(#hatch)" stroke="#283649" stroke-width="2"><path d="M130 155H430V205H130ZM130 305H430V355H130Z"/><circle cx="615" cy="225" r="75"/><circle cx="615" cy="225" r="37.5" fill="#fff"/></g>
+    <g stroke="#8190a3" stroke-width="0.8" stroke-dasharray="15 4 3 4"><path d="M100 255H460M515 225H715M615 125V325"/></g>
+    <g fill="none" stroke="#526176" stroke-width="1"><path d="M130 362V406M430 362V406M130 394H430M124 388L136 400M424 388L436 400M122 155H63M122 355H63M76 155V355M70 149L82 161M70 349L82 361M438 205H506M438 305H506M495 205V305M489 199L501 211M489 299L501 311M330 155L345 128H412"/></g>
+    <text x="269" y="386" font-size="15">30</text><text transform="translate(65 291) rotate(-90)" font-size="15">Ø40 ±0,1</text><text transform="translate(485 275) rotate(-90)" font-size="15">Ø20</text><text x="347" y="120" font-size="15">Ra 1,6</text>
+    <text x="239" y="435" font-size="12">Продольный разрез</text><text x="577" y="345" font-size="12">Вид с торца</text>
+    <text x="100" y="467" font-size="14">Ra 3,2 для поверхностей без местного обозначения</text>
+    <path d="M38 490H762" stroke="#d5dce5"/>
+    <text x="38" y="515" font-size="12">Материал: Сталь 45 · Фаски и скругления отсутствуют по условию примера</text><text x="38" y="537" font-size="11" fill="#657387">Демонстрационные данные созданы вручную. Эскиз не предназначен для изготовления.</text>
+  </g>
+</svg>

@@ -1,0 +1,25 @@
+{
+  "name": "ai-skaner",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node tools/prepare-pdf-assets.mjs && vite src/ui --host 127.0.0.1",
+    "build": "node tools/prepare-pdf-assets.mjs && tsc --noEmit && vite build src/ui",
+    "preview": "vite preview src/ui --host 127.0.0.1",
+    "format": "prettier --write src/ui/src src/ui/index.html package.json tsconfig.json AI-SKANER.code-workspace tools/prepare-pdf-assets.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "1.54.0",
+    "pdfjs-dist": "6.4.299",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "prettier": "3.9.9",
+    "typescript": "7.0.2",
+    "vite": "8.3.4"
+  }
+}
