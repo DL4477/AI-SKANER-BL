@@ -1,3 +1,4 @@
+use super::analysis::{self, AnalysisInput, AnalysisReport};
 use super::error::{AiError, AiResult};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::{Client, Response, StatusCode};
@@ -33,6 +34,27 @@ pub struct KimiClient {
 }
 
 impl KimiClient {
+    pub async fn analyze(&self, input: &AnalysisInput, key: &str) -> AiResult<AnalysisReport> {
+        let started = Instant::now();
+        let response = self
+            .http
+            .post(format!("{}/chat/completions", self.base_url))
+            .timeout(Duration::from_secs(240))
+            .bearer_auth(key)
+            .json(&analysis::request_body(input, MODEL))
+            .send()
+            .await
+            .map_err(network_error)?;
+        let value = read_response(response).await?;
+        let data = analysis::parse_output(&value, input)?;
+        Ok(AnalysisReport {
+            data,
+            elapsed_ms: started.elapsed().as_millis() as u64,
+            total_tokens: value.pointer("/usage/total_tokens").and_then(Value::as_u64),
+            model: MODEL,
+        })
+    }
+
     pub fn new() -> AiResult<Self> {
         Ok(Self {
             http: build_http_client(Duration::from_secs(90))?,
@@ -72,7 +94,7 @@ fn build_http_client(timeout: Duration) -> AiResult<Client> {
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .user_agent("AI-SKANER/0.2.0")
+        .user_agent("AI-SKANER/0.3.0")
         .build()
         .map_err(|_| {
             AiError::new(
@@ -86,7 +108,7 @@ fn network_error(error: reqwest::Error) -> AiError {
     if error.is_timeout() {
         AiError::new(
             "timeout",
-            "Kimi не ответил за 90 секунд. Проверьте соединение или повторите позже.",
+            "Kimi не ответил за отведённое время. Проверьте соединение или повторите позже.",
         )
     } else {
         AiError::new(

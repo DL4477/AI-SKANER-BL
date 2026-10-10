@@ -26,6 +26,7 @@ export function useModelConnection() {
   const [loading, setLoading] = useState(desktopAvailable);
   const [loadError, setLoadError] = useState<ConnectionError | null>(null);
   const [saving, setSaving] = useState(false);
+  const [analysisReply, setAnalysisReply] = useState(false);
   const [notice, setNotice] = useState<ProbeResult | null>(null);
   const [active, setActive] = useState<DiagnosticKind | null>(null);
   const [cancelling, setCancelling] = useState(false);
@@ -81,6 +82,7 @@ export function useModelConnection() {
       setInfo(value);
       setLoadError(null);
       setResults({});
+      setAnalysisReply(false);
       const message =
         key === undefined
           ? "Ключ удалён с этого компьютера."
@@ -159,9 +161,11 @@ export function useModelConnection() {
   const hasFailure = Object.values(results).some(
     (result) => result?.status === "error",
   );
-  const hasReply = (["text", "vision", "json"] as const).some(
-    (kind) => results[kind]?.status === "success",
-  );
+  const hasReply =
+    analysisReply ||
+    (["text", "vision", "json"] as const).some(
+      (kind) => results[kind]?.status === "success",
+    );
   const badge = !desktopAvailable
     ? { text: "Откройте приложение", tone: "neutral" }
     : loading
@@ -196,6 +200,8 @@ export function useModelConnection() {
     changeKey,
     run,
     cancel,
+    log,
+    markAnalysisReply: () => setAnalysisReply(true),
   };
 }
 

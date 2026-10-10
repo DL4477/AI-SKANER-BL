@@ -6,6 +6,8 @@ fn main() {
             "remove_api_key",
             "run_diagnostic",
             "cancel_diagnostic",
+            "analyze_drawing",
+            "save_analysis",
         ]),
     ))
     .expect("failed to build desktop permissions");

@@ -1,6 +1,6 @@
 [package]
 name = "ai-skaner"
-version = "0.2.0"
+version = "0.3.0"
 description = "Local workspace for engineering PDF drawings"
 repository = "https://github.com/DL4477/AI-SKANER-BL"
 edition = "2024"
@@ -24,3 +24,5 @@ keyring = { version = "4.2.0", default-features = false, features = ["v1"] }
 zeroize = "1"
 base64 = "0.22"
 tokio = { version = "1", features = ["sync", "macros", "time"] }
+jsonschema = { version = "0.58.6", default-features = false }
+rfd = { version = "0.17.2", default-features = false }

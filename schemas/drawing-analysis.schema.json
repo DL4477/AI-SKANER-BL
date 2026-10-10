@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Drawing analysis draft",
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["0.1.0-draft"]
+    },
+    "status": {
+      "type": "string",
+      "enum": ["needs_review"]
+    },
+    "ready_for_3d": {
+      "type": "boolean",
+      "enum": [false]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "page_count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "kind": {
+          "type": "string",
+          "enum": ["pdf", "demo"]
+        }
+      },
+      "required": ["name", "page_count", "kind"],
+      "additionalProperties": false
+    },
+    "drawing_general": {
+      "type": "object",
+      "properties": {
+        "part_name": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "designation": {
+          "type": ["string", "null"],
+          "maxLength": 200
+        },
+        "material": {
+          "type": ["string", "null"],
+          "maxLength": 500
+        },
+        "units": {
+          "type": ["string", "null"],
+          "maxLength": 80
+        },
+        "notes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "maxItems": 80
+        },
+        "general_requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          },
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "part_name",
+        "designation",
+        "material",
+        "units",
+        "notes",
+        "general_requirements"
+      ],
+      "additionalProperties": false
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/surface"
+      },
+      "maxItems": 200
+    },
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 2000
+      },
+      "maxItems": 100
+    },
+    "summary": {
+      "type": "string",
+      "maxLength": 3000
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "ready_for_3d",
+    "source",
+    "drawing_general",
+    "surfaces",
+    "questions",
+    "summary"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "bbox": {
+          "type": ["array", "null"],
+          "items": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "minItems": 4,
+          "maxItems": 4
+        }
+      },
+      "required": ["page", "description", "bbox"],
+      "additionalProperties": false
+    },
+    "requirement": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "roughness",
+            "dimensional_tolerance",
+            "geometrical_tolerance",
+            "it_grade",
+            "heat_treatment",
+            "coating",
+            "other"
+          ]
+        },
+        "raw_text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "value": {
+          "type": ["number", "null"]
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "maxLength": 80
+        },
+        "it_grade": {
+          "type": ["string", "null"],
+          "maxLength": 32
+        },
+        "applies_to": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "maxItems": 16
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "raw_text",
+        "value",
+        "unit",
+        "it_grade",
+        "applies_to",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "parameter": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "value": {
+          "type": ["number", "null"]
+        },
+        "unit": {
+          "type": ["string", "null"],
+          "maxLength": 80
+        },
+        "designation": {
+          "type": ["string", "null"],
+          "maxLength": 300
+        },
+        "basis": {
+          "type": "string",
+          "enum": ["read", "derived", "unknown"]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "maxItems": 16
+        }
+      },
+      "required": ["name", "value", "unit", "designation", "basis", "evidence"],
+      "additionalProperties": false
+    },
+    "surface": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "plane",
+            "cylinder",
+            "cone",
+            "sphere",
+            "torus",
+            "freeform",
+            "other",
+            "unknown"
+          ]
+        },
+        "orientation": {
+          "type": "string",
+          "enum": ["outward", "inward", "unknown"]
+        },
+        "geometry_parameters": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/parameter"
+          },
+          "maxItems": 40
+        },
+        "boundary_description": {
+          "type": ["string", "null"],
+          "maxLength": 2000
+        },
+        "local_requirements": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/requirement"
+          },
+          "maxItems": 80
+        },
+        "general_requirement_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "maxItems": 80
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "maxItems": 16,
+          "minItems": 1
+        },
+        "uncertainties": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "maxItems": 30
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "orientation",
+        "geometry_parameters",
+        "boundary_description",
+        "local_requirements",
+        "general_requirement_ids",
+        "evidence",
+        "uncertainties"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

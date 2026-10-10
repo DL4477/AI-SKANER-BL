@@ -18,13 +18,21 @@ const probes: { kind: DiagnosticKind; description: string }[] = [
 
 export default function ModelSettings({
   connection: c,
+  locked = false,
 }: {
   connection: ModelConnection;
+  locked?: boolean;
 }) {
   const [key, setKey] = useState("");
-  const disabled = !c.desktopAvailable || c.busy;
+  const disabled = !c.desktopAvailable || c.busy || locked;
   return (
     <div className="model-settings">
+      {locked && (
+        <p className="connection-notice">
+          Идёт анализ чертежа. Изменение ключа и проверки будут доступны после
+          его завершения или отмены.
+        </p>
+      )}
       <div className="provider-card">
         <div>
           <strong>Kimi K3</strong>
@@ -206,8 +214,9 @@ export default function ModelSettings({
       <div className="upcoming-tools">
         <strong>Следующий этап</strong>
         <p>
-          Разбор PDF, инструменты распознавания и структура JSON с общими
-          требованиями и поверхностями.
+          Уточнение мелких фрагментов, инструменты OCR и проверка геометрии.
+          Пробный анализ уже запускается кнопкой «Разобрать чертёж» в рабочей
+          области.
         </p>
       </div>
     </div>

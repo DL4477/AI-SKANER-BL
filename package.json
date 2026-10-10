@@ -1,7 +1,7 @@
 {
   "name": "ai-skaner",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "type": "module",
   "scripts": {
     "dev": "node tools/prepare-pdf-assets.mjs && vite src/ui --host 127.0.0.1 --port 5173 --strictPort",

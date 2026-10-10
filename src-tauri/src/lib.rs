@@ -11,7 +11,9 @@ pub fn run() {
             ai::save_api_key,
             ai::remove_api_key,
             ai::run_diagnostic,
-            ai::cancel_diagnostic
+            ai::cancel_diagnostic,
+            ai::analyze_drawing,
+            ai::save_analysis
         ])
         .run(tauri::generate_context!())
         .expect("could not start AI SKANER");

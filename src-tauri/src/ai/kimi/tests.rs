@@ -79,6 +79,55 @@ fn completion(content: &str) -> Value {
 }
 
 #[tokio::test]
+async fn drawing_analysis_roundtrip_validates_response_and_releases_service() {
+    let value = crate::ai::analysis::tests::data();
+    let response = crate::ai::analysis::tests::completion(&value);
+    let (client, server) = mock_server("200 OK", "", response.to_string());
+    let mut service = crate::ai::tests::service();
+    service.client = client;
+    service.save_key("fake-offline-key".into()).unwrap();
+    let result = service
+        .analyze(crate::ai::analysis::tests::input(), "analysis-1")
+        .await
+        .unwrap();
+    assert_eq!(result.data["surfaces"].as_array().unwrap().len(), 1);
+    assert_eq!(result.total_tokens, Some(123));
+    let request = server.join().unwrap();
+    let body: Value = serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(
+        body["response_format"]["json_schema"]["name"],
+        "drawing_analysis"
+    );
+    service.remove_key().unwrap();
+}
+
+#[tokio::test]
+async fn drawing_analysis_can_be_cancelled_and_diagnostics_cannot_overlap() {
+    let response = crate::ai::analysis::tests::completion(&crate::ai::analysis::tests::data());
+    let (client, server) = mock_server_with_delay(
+        "200 OK",
+        "",
+        response.to_string(),
+        Duration::from_millis(250),
+        Duration::from_secs(3),
+    );
+    let mut service = crate::ai::tests::service();
+    service.client = client;
+    service.save_key("fake-offline-key".into()).unwrap();
+    let (result, _) = tokio::join!(
+        service.analyze(crate::ai::analysis::tests::input(), "analysis-1"),
+        async {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            assert_eq!(service.begin("diagnostic-1").err().unwrap().code, "busy");
+            service.cancel("analysis-1").unwrap();
+        }
+    );
+    assert_eq!(result.unwrap_err().code, "cancelled");
+    service.remove_key().unwrap();
+    server.join().unwrap();
+}
+
+#[tokio::test]
 async fn a_slow_response_times_out_and_releases_the_service() {
     let (client, server) = mock_server_with_delay(
         "200 OK",

@@ -1,6 +1,9 @@
+mod analysis;
 mod error;
 mod kimi;
 mod vault;
+
+use analysis::{AnalysisInput, AnalysisReport};
 
 use error::{AiError, AiResult};
 use kimi::{DiagnosticKind, DiagnosticReport, ENDPOINT, KimiClient, MODEL};
@@ -44,6 +47,18 @@ pub struct AiService {
 }
 
 impl AiService {
+    async fn analyze(&self, input: AnalysisInput, request_id: &str) -> AiResult<AnalysisReport> {
+        analysis::validate_input(&input)?;
+        let (key, mut cancellation) = self.begin(request_id)?;
+        let result = tokio::select! {
+            biased;
+            _ = cancellation.changed() => Err(AiError::cancelled()),
+            result = self.client.analyze(&input, &key) => result,
+        };
+        self.operations.lock().map_err(|_| AiError::busy())?.active = None;
+        result
+    }
+
     async fn diagnose(&self, kind: DiagnosticKind, request_id: &str) -> AiResult<DiagnosticReport> {
         let (key, mut cancellation) = self.begin(request_id)?;
         let result = tokio::select! {
@@ -162,5 +177,19 @@ pub fn cancel_diagnostic(request_id: String, state: State<'_, AiService>) -> AiR
     state.cancel(&request_id)
 }
 
+#[tauri::command]
+pub async fn analyze_drawing(
+    input: AnalysisInput,
+    request_id: String,
+    state: State<'_, AiService>,
+) -> AiResult<AnalysisReport> {
+    state.analyze(input, &request_id).await
+}
+
 #[cfg(test)]
 mod tests;
+
+#[tauri::command]
+pub async fn save_analysis(data: serde_json::Value, window: tauri::Window) -> AiResult<bool> {
+    analysis::save_with_dialog(&data, rfd::AsyncFileDialog::new().set_parent(&window)).await
+}

@@ -9,6 +9,7 @@ import {
   FileText,
   FolderOpen,
   Layers3,
+  LoaderCircle,
   Maximize2,
   Minus,
   Plus,
@@ -22,6 +23,8 @@ import {
 import PdfPreview from "./PdfPreview";
 import ModelSettings from "./model/ModelSettings";
 import { useModelConnection } from "./model/useModelConnection";
+import { useDrawingAnalysis } from "./analysis/useDrawingAnalysis";
+import AnalysisInspector from "./analysis/AnalysisInspector";
 
 type Surface = {
   id: string;
@@ -96,6 +99,10 @@ type LocalDocument = { name: string; url: string };
 
 export default function App() {
   const connection = useModelConnection();
+  const analysis = useDrawingAnalysis(
+    connection.log,
+    connection.markAnalysisReply,
+  );
   const [document, setDocument] = useState<LocalDocument | null>(null);
   const [selected, setSelected] = useState("S001");
   const [tab, setTab] = useState<"surfaces" | "general">("surfaces");
@@ -124,8 +131,12 @@ export default function App() {
   }, [dialog]);
 
   async function openFile(file?: File) {
-    if (!file) return;
+    if (!file || analysis.busy) return;
     setError("");
+    if (file.size > 40 * 1024 * 1024) {
+      setError("Для пробного анализа выберите PDF размером до 40 МБ.");
+      return;
+    }
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       setError("Выберите PDF-файл. Другие форматы пока не поддерживаются.");
       return;
@@ -136,6 +147,7 @@ export default function App() {
         setError("Файл не похож на PDF. Проверьте исходный документ.");
         return;
       }
+      if (!analysis.reset()) return;
       setDocument({ name: file.name, url: URL.createObjectURL(file) });
       setZoom(100);
       setDialog(null);
@@ -144,6 +156,7 @@ export default function App() {
     }
   }
   function openDemo() {
+    if (!analysis.reset()) return;
     setDocument(null);
     setSelected("S001");
     setZoom(100);
@@ -171,6 +184,24 @@ export default function App() {
           Math.floor((Math.min(width, (height * 800) / 560) / width) * 100),
         ),
       ),
+    );
+  }
+
+  function analyzeDrawing() {
+    if (analysis.busy || connection.busy) return;
+    if (
+      !connection.desktopAvailable ||
+      !connection.info.keyStored ||
+      connection.loadError
+    ) {
+      setDialog("settings");
+      return;
+    }
+    setTab("surfaces");
+    void analysis.run(
+      document
+        ? { ...document, kind: "pdf" }
+        : { name: "Учебная втулка", url: "/demo-bushing.svg", kind: "demo" },
     );
   }
 
@@ -235,18 +266,19 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                ПРОЕКТИРОВАНИЕ <span>/</span> ПОДКЛЮЧЕНИЕ МОДЕЛИ
+                ПРОЕКТИРОВАНИЕ <span>/</span> АНАЛИЗ ЧЕРТЕЖА
               </div>
               <h1>{demo ? "Учебная втулка" : document.name}</h1>
               <p>
                 {demo
                   ? "DEMO-001 · Пример рабочего пространства"
-                  : "Локальный документ · Только просмотр"}
+                  : "Локальный документ"}
               </p>
             </div>
             <div className="heading-actions">
               <button
                 className="button"
+                disabled={analysis.busy}
                 onClick={() => fileInput.current?.click()}
               >
                 <Upload size={16} />
@@ -254,11 +286,20 @@ export default function App() {
               </button>
               <button
                 className="button primary"
-                disabled
-                title="Разбор появится после подключения ядра агента"
+                disabled={analysis.busy || connection.busy}
+                onClick={analyzeDrawing}
+                title="Проанализировать все листы открытого чертежа через Kimi API"
               >
-                <ScanLine size={17} />
-                Разобрать чертёж
+                {analysis.busy ? (
+                  <LoaderCircle size={17} className="loading-spinner" />
+                ) : (
+                  <ScanLine size={17} />
+                )}
+                {analysis.busy
+                  ? "Анализ…"
+                  : analysis.report
+                    ? "Повторить анализ"
+                    : "Разобрать чертёж"}
               </button>
             </div>
             <input
@@ -274,19 +315,63 @@ export default function App() {
           </div>
 
           <div className="stage-strip">
-            <span className="stage current">
+            <span
+              className={`stage ${!analysis.busy && !analysis.report ? "current" : ""}`}
+            >
               <span className="stage-number">1</span>Исходный чертёж
             </span>
             <ChevronRight size={15} />
-            <span className="stage">
+            <span className={`stage ${analysis.busy ? "current" : ""}`}>
               <span className="stage-number">2</span>Разбор агентом
             </span>
             <ChevronRight size={15} />
-            <span className="stage">
+            <span className={`stage ${analysis.report ? "current" : ""}`}>
               <span className="stage-number">3</span>Проверка и JSON
             </span>
-            <span className="stage-note">Этап 2 · Подключение Kimi</span>
+            <span className="stage-note">Пробный анализ · до 8 листов</span>
           </div>
+          <p className="analysis-disclosure">
+            По нажатию «Разобрать чертёж» изображения всех листов отправляются в
+            Kimi. Запрос платный. Результат нужно сверить с чертежом.
+          </p>
+          {(analysis.busy || analysis.progress || analysis.error) && (
+            <div
+              className={`analysis-progress ${analysis.error ? "error" : ""}`}
+              role={analysis.error ? "alert" : "status"}
+            >
+              <div>
+                {analysis.busy && (
+                  <LoaderCircle size={16} className="loading-spinner" />
+                )}
+                <span>{analysis.error || analysis.progress}</span>
+                {analysis.report && (
+                  <small>
+                    {(analysis.report.elapsedMs / 1000).toFixed(1)} с
+                    {analysis.report.totalTokens != null
+                      ? ` · ${analysis.report.totalTokens} токенов`
+                      : ""}
+                  </small>
+                )}
+              </div>
+              {analysis.busy && (
+                <button
+                  className="button"
+                  disabled={analysis.cancelling}
+                  onClick={() => {
+                    void analysis.cancel();
+                  }}
+                >
+                  {analysis.cancelling ? "Отмена…" : "Остановить анализ"}
+                </button>
+              )}
+              {analysis.busy && (
+                <small>
+                  Остановка прерывает ожидание; Kimi может учесть стоимость уже
+                  принятого запроса.
+                </small>
+              )}
+            </div>
+          )}
           {error && (
             <div className="error-message" role="alert">
               {error}
@@ -302,6 +387,7 @@ export default function App() {
               aria-label="Просмотр чертежа"
               onDragOver={(event) => {
                 event.preventDefault();
+                if (analysis.busy) return;
                 setDragging(true);
               }}
               onDragLeave={(event) => {
@@ -365,18 +451,20 @@ export default function App() {
                       src="/demo-bushing.svg"
                       alt="Учебный эскиз втулки с наружным диаметром 40, отверстием 20 и длиной 30 миллиметров"
                     />
-                    <svg
-                      className="drawing-overlay"
-                      viewBox="0 0 800 560"
-                      aria-label={`Подсветка: ${tab === "general" ? "общие требования" : surface.name}`}
-                      role="img"
-                    >
-                      {tab === "surfaces" ? (
-                        <path d={highlightPaths[selected]} />
-                      ) : (
-                        <rect x="94" y="444" width="600" height="35" rx="4" />
-                      )}
-                    </svg>
+                    {!analysis.report && (
+                      <svg
+                        className="drawing-overlay"
+                        viewBox="0 0 800 560"
+                        aria-label={`Подсветка: ${tab === "general" ? "общие требования" : surface.name}`}
+                        role="img"
+                      >
+                        {tab === "surfaces" ? (
+                          <path d={highlightPaths[selected]} />
+                        ) : (
+                          <rect x="94" y="444" width="600" height="35" rx="4" />
+                        )}
+                      </svg>
+                    )}
                   </div>
                 ) : (
                   <PdfPreview key={document.url} url={document.url} />
@@ -392,9 +480,11 @@ export default function App() {
                 <span>
                   {demo
                     ? "Лист 1 из 1"
-                    : "Локальный просмотр · без обработки ИИ"}
+                    : analysis.report
+                      ? "Листы обработаны · требуется проверка"
+                      : "Локальный просмотр PDF"}
                 </span>
-                {demo ? (
+                {demo && !analysis.report ? (
                   <span className="selection-hint">
                     <span className="blue-dot" />
                     {tab === "general"
@@ -402,10 +492,16 @@ export default function App() {
                       : `${surface.id} · ${surface.name}`}
                   </span>
                 ) : (
-                  <button className="text-button" onClick={openDemo}>
-                    Закрыть PDF
-                    <X size={13} />
-                  </button>
+                  !demo && (
+                    <button
+                      className="text-button"
+                      onClick={openDemo}
+                      disabled={analysis.busy}
+                    >
+                      Закрыть PDF
+                      <X size={13} />
+                    </button>
+                  )
                 )}
               </div>
             </section>
@@ -421,7 +517,12 @@ export default function App() {
                   className={tab === "surfaces" ? "selected" : ""}
                   onClick={() => setTab("surfaces")}
                 >
-                  Поверхности{demo && <span>4</span>}
+                  Поверхности
+                  {analysis.report ? (
+                    <span>{analysis.report.data.surfaces.length}</span>
+                  ) : (
+                    demo && <span>4</span>
+                  )}
                 </button>
                 <button
                   aria-pressed={tab === "general"}
@@ -432,18 +533,26 @@ export default function App() {
                 </button>
               </div>
               <div className="inspector-content">
-                {!demo ? (
+                {analysis.report ? (
+                  <AnalysisInspector
+                    key={analysis.report.elapsedMs}
+                    data={analysis.report.data}
+                    tab={tab}
+                  />
+                ) : !demo ? (
                   <div className="empty-data">
                     <div className="empty-icon">
                       <ScanLine size={28} />
                     </div>
                     <h3>Чертёж открыт</h3>
                     <p>
-                      Здесь появятся поверхности, размеры и требования после
-                      подключения агента.
+                      Нажмите «Разобрать чертёж», чтобы получить поверхности,
+                      размеры и требования из Kimi.
                     </p>
                     <span className="muted-label">
-                      Сейчас доступен просмотр PDF
+                      {analysis.busy
+                        ? "Анализ выполняется…"
+                        : "Результатов анализа пока нет"}
                     </span>
                     <button className="text-button" onClick={openDemo}>
                       Посмотреть учебный пример
@@ -566,17 +675,20 @@ export default function App() {
               </div>
               <div className="inspector-footer">
                 <span>
-                  {demo
-                    ? "Данные примера заданы вручную"
-                    : "Распознавание ещё не запускалось"}
+                  {analysis.report
+                    ? "Черновик Kimi · требуется проверка"
+                    : demo
+                      ? "Данные примера заданы вручную"
+                      : "Распознавание ещё не запускалось"}
                 </span>
                 <button
                   className="button export-button"
-                  disabled
-                  title="Экспорт станет доступен после реализации структуры данных"
+                  disabled={!analysis.report || analysis.busy || analysis.saving}
+                  onClick={analysis.download}
+                  title="Сохранить черновик JSON; готовность к построению 3D не подтверждена"
                 >
                   <ArrowDownToLine size={15} />
-                  Экспорт JSON
+                  {analysis.saving ? "Сохранение…" : "Сохранить JSON"}
                 </button>
               </div>
             </aside>
@@ -597,11 +709,13 @@ export default function App() {
                 </span>
               </span>
               <span className="journal-summary">
-                {connection.active
-                  ? "Проверка Kimi…"
-                  : document
-                    ? "PDF открыт локально"
-                    : "Учебный пример загружен"}
+                {analysis.busy
+                  ? "Анализ чертежа…"
+                  : connection.active
+                    ? "Проверка Kimi…"
+                    : document
+                      ? "PDF открыт локально"
+                      : "Учебный пример загружен"}
                 <ChevronDown className={journal ? "rotated" : ""} size={16} />
               </span>
             </button>
@@ -633,12 +747,14 @@ export default function App() {
           <footer className="workspace-footer">
             <span>
               <span className="status-dot" />
-              {demo
-                ? "Демонстрация интерфейса · без ИИ-обработки"
-                : "PDF остаётся на этом компьютере"}
+              {analysis.report
+                ? "Визуальный анализ Kimi · черновой результат"
+                : demo
+                  ? "Демонстрация интерфейса · без ИИ-обработки"
+                  : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.2</span>
+              ИИ СКАНЕР <span className="version">0.3</span>
             </span>
           </footer>
         </main>
@@ -668,7 +784,7 @@ export default function App() {
           </button>
         </div>
         {dialog === "settings" ? (
-          <ModelSettings connection={connection} />
+          <ModelSettings connection={connection} locked={analysis.busy} />
         ) : dialog === "projects" ? (
           <>
             <p className="modal-intro">
@@ -725,9 +841,10 @@ export default function App() {
               </li>
             </ul>
             <p className="detail-explanation">
-              Распознавание, проверка геометрии, библиотека проектов и экспорт
-              JSON ещё не подключены. Учебные значения не относятся к
-              загруженным PDF.
+              «Разобрать чертёж» запускает визуальный анализ всех листов через
+              Kimi. Полученный JSON — черновик; геометрия и полнота поверхностей
+              требуют ручной проверки. Автоматическое построение 3D и библиотека
+              проектов пока не подключены.
             </p>
             <button className="button primary" onClick={() => setDialog(null)}>
               К рабочему пространству

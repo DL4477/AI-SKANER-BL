@@ -1299,6 +1299,135 @@ h4 {
 .status-dot.success {
   background: #2e9a74;
 }
+.analysis-disclosure {
+  margin: -8px 0 16px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #708098;
+}
+.analysis-progress {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #dbe6f7;
+  border-radius: 8px;
+  background: #f0f5ff;
+  color: #42628d;
+  font-size: 12px;
+}
+.analysis-progress > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 200px;
+  flex-wrap: wrap;
+}
+.analysis-progress small {
+  font-size: 10px;
+}
+.analysis-progress > small {
+  width: 100%;
+}
+.analysis-progress.error {
+  background: #fff2ee;
+  color: #a34e40;
+  border-color: #efdad4;
+}
+.analysis-draft {
+  padding: 16px 20px;
+  background: #fff9e9;
+  color: #78652e;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.analysis-draft strong {
+  font-size: 12px;
+}
+.analysis-draft p {
+  margin: 6px 0;
+}
+.analysis-draft small {
+  font-size: 10px;
+}
+.analysis-data {
+  overflow-wrap: anywhere;
+}
+.analysis-data .properties small {
+  display: block;
+  color: #718099;
+  margin-top: 3px;
+}
+.analysis-data .surface-list {
+  max-height: 220px;
+  overflow: auto;
+}
+.analysis-requirement {
+  padding: 12px;
+  border: 1px solid #e4eaf1;
+  border-radius: 7px;
+  margin: 8px 0;
+  font-size: 11px;
+  line-height: 1.65;
+  background: #fafbfd;
+}
+.analysis-requirement strong {
+  font-weight: 600;
+}
+.analysis-requirement p {
+  margin: 5px 0 0;
+}
+.analysis-evidence {
+  margin: 8px 0;
+  padding-left: 16px;
+  font-size: 10px;
+  color: #728198;
+  line-height: 1.6;
+}
+.analysis-sources {
+  margin: 12px 0;
+  font-size: 11px;
+  color: #728198;
+}
+.analysis-sources summary,
+.analysis-json summary {
+  cursor: pointer;
+}
+.analysis-question {
+  padding: 10px 12px;
+  color: #866e34;
+  background: #fff9e9;
+  font-size: 11px;
+  line-height: 1.6;
+  border-radius: 6px;
+}
+.analysis-questions {
+  padding: 0 20px 16px;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #7e6b3b;
+}
+.analysis-questions ul {
+  padding-left: 16px;
+}
+.analysis-questions li + li {
+  margin-top: 7px;
+}
+.analysis-json {
+  padding: 14px 20px;
+  border-top: 1px solid #e4eaf1;
+  font-size: 11px;
+  color: #5b6f8e;
+}
+.analysis-json pre {
+  white-space: pre-wrap;
+  font-size: 10px;
+  line-height: 1.5;
+  user-select: text;
+}
 .status-dot.error {
   background: #d56b58;
 }

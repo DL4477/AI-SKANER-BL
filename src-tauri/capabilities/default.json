@@ -1,7 +1,16 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window can manage the Kimi credential and run bounded diagnostics. No arbitrary filesystem or HTTP access.",
+  "description": "Main window can manage the Kimi credential, analyze bounded drawings and save validated JSON through a native file picker. No arbitrary filesystem or HTTP access.",
   "windows": ["main"],
-  "permissions": ["core:default", "allow-model-status", "allow-save-api-key", "allow-remove-api-key", "allow-run-diagnostic", "allow-cancel-diagnostic"]
+  "permissions": [
+    "core:default",
+    "allow-model-status",
+    "allow-save-api-key",
+    "allow-remove-api-key",
+    "allow-run-diagnostic",
+    "allow-cancel-diagnostic",
+    "allow-analyze-drawing",
+    "allow-save-analysis"
+  ]
 }
