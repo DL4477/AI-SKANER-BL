@@ -38,7 +38,7 @@ export default function PdfPreview({ url }: { url: string }) {
     task.onPassword = () => {
       if (!cancelled) {
         setError(
-          "PDF защищён паролем. Откройте его отдельно или выберите документ без пароля.",
+          "PDF защищён паролем. Откройте исходный файл в другой программе или выберите документ без пароля.",
         );
         setBusy(false);
       }

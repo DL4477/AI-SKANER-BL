@@ -1,0 +1,19 @@
+[package]
+name = "ai-skaner"
+version = "0.1.0"
+description = "Local workspace for engineering PDF drawings"
+repository = "https://github.com/DL4477/AI-SKANER-BL"
+edition = "2024"
+rust-version = "1.90"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "ai_skaner_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.7.1", features = [] }
+
+[dependencies]
+tauri = { version = "2.12.1", features = [] }

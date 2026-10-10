@@ -407,10 +407,10 @@ export default function App() {
                       : `${surface.id} · ${surface.name}`}
                   </span>
                 ) : (
-                  <a href={document.url} target="_blank" rel="noreferrer">
-                    Открыть отдельно
-                    <ArrowUpRight size={13} />
-                  </a>
+                  <button className="text-button" onClick={openDemo}>
+                    Закрыть PDF
+                    <X size={13} />
+                  </button>
                 )}
               </div>
             </section>

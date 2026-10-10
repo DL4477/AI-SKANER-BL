@@ -1,0 +1,53 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "ИИ СКАНЕР",
+  "version": "0.1.0",
+  "identifier": "io.github.dl4477.ai-skaner",
+  "build": {
+    "frontendDist": "../src/ui/dist",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/ui.ps1 -Mode dev",
+    "beforeBuildCommand": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File tools/ui.ps1 -Mode build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ИИ СКАНЕР",
+        "label": "main",
+        "width": 1280,
+        "height": 860,
+        "minWidth": 960,
+        "minHeight": 640,
+        "center": true,
+        "dragDropEnabled": false,
+        "backgroundColor": "#f4f6fa",
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost blob:; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'",
+      "devCsp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost blob: ws://127.0.0.1:5173; worker-src 'self' blob:; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "shortDescription": "Рабочее пространство для PDF-чертежей",
+    "category": "Productivity",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": ["Russian"],
+        "startMenuFolder": "ИИ СКАНЕР"
+      }
+    }
+  }
+}
