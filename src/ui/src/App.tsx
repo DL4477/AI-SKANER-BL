@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowUpRight,
-  Box,
   Check,
   ChevronDown,
   ChevronRight,
@@ -21,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import PdfPreview from "./PdfPreview";
+import ModelSettings from "./model/ModelSettings";
+import { useModelConnection } from "./model/useModelConnection";
 
 type Surface = {
   id: string;
@@ -92,9 +93,9 @@ const highlightPaths: Record<string, string> = {
   S004: "M430 155V205 M430 305V355",
 };
 type LocalDocument = { name: string; url: string };
-type ModelProfile = { mode: string; endpoint: string; model: string };
 
 export default function App() {
+  const connection = useModelConnection();
   const [document, setDocument] = useState<LocalDocument | null>(null);
   const [selected, setSelected] = useState("S001");
   const [tab, setTab] = useState<"surfaces" | "general">("surfaces");
@@ -105,12 +106,6 @@ export default function App() {
   const [dialog, setDialog] = useState<"settings" | "projects" | "help" | null>(
     null,
   );
-  const [profile, setProfile] = useState<ModelProfile>({
-    mode: "remote",
-    endpoint: "",
-    model: "",
-  });
-  const [savedProfile, setSavedProfile] = useState<ModelProfile | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const drawingSpace = useRef<HTMLDivElement>(null);
   const modal = useRef<HTMLDialogElement>(null);
@@ -231,8 +226,8 @@ export default function App() {
             <span className="workspace-label">Рабочее пространство</span>
           </div>
           <button className="connection" onClick={() => setDialog("settings")}>
-            <span className="status-dot" />
-            Модель не подключена
+            <span className={`status-dot ${connection.badge.tone}`} />
+            {connection.badge.text}
             <Settings2 size={15} />
           </button>
         </header>
@@ -240,7 +235,7 @@ export default function App() {
           <div className="page-heading">
             <div>
               <div className="eyebrow">
-                ПРОЕКТИРОВАНИЕ <span>/</span> ПЕРВЫЙ ИНТЕРФЕЙС
+                ПРОЕКТИРОВАНИЕ <span>/</span> ПОДКЛЮЧЕНИЕ МОДЕЛИ
               </div>
               <h1>{demo ? "Учебная втулка" : document.name}</h1>
               <p>
@@ -290,7 +285,7 @@ export default function App() {
             <span className="stage">
               <span className="stage-number">3</span>Проверка и JSON
             </span>
-            <span className="stage-note">Этап 1 · Интерфейс</span>
+            <span className="stage-note">Этап 2 · Подключение Kimi</span>
           </div>
           {error && (
             <div className="error-message" role="alert">
@@ -597,10 +592,16 @@ export default function App() {
               <span>
                 <Workflow size={16} />
                 Журнал действий
-                <span className="count">{document ? "2" : "1"}</span>
+                <span className="count">
+                  {(document ? 2 : 1) + connection.events.length}
+                </span>
               </span>
               <span className="journal-summary">
-                {document ? "PDF открыт локально" : "Учебный пример загружен"}
+                {connection.active
+                  ? "Проверка Kimi…"
+                  : document
+                    ? "PDF открыт локально"
+                    : "Учебный пример загружен"}
                 <ChevronDown className={journal ? "rotated" : ""} size={16} />
               </span>
             </button>
@@ -616,9 +617,15 @@ export default function App() {
                     Открыт локальный файл: {document.name}
                   </p>
                 )}
+                {connection.events.map((event) => (
+                  <p key={event.id}>
+                    <time>{event.time}</time>
+                    {event.message}
+                  </p>
+                ))}
                 <p className="muted-label">
-                  Запросы к модели не выполняются. Журнал доступен до
-                  перезагрузки страницы.
+                  Показаны последние 20 действий подключения. Журнал доступен до
+                  закрытия приложения.
                 </p>
               </div>
             )}
@@ -631,7 +638,7 @@ export default function App() {
                 : "PDF остаётся на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.1</span>
+              ИИ СКАНЕР <span className="version">0.2</span>
             </span>
           </footer>
         </main>
@@ -639,7 +646,7 @@ export default function App() {
 
       <dialog
         ref={modal}
-        className="modal"
+        className={`modal ${dialog === "settings" ? "model-modal" : ""}`}
         onCancel={() => setDialog(null)}
         onClose={() => setDialog(null)}
         aria-labelledby="dialog-title"
@@ -650,7 +657,7 @@ export default function App() {
               ? "Модель и инструменты"
               : dialog === "projects"
                 ? "Рабочие документы"
-                : "Первый интерфейс"}
+                : "О приложении"}
           </h2>
           <button
             className="icon-button"
@@ -661,87 +668,7 @@ export default function App() {
           </button>
         </div>
         {dialog === "settings" ? (
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              setSavedProfile({ ...profile });
-            }}
-          >
-            <p className="modal-intro">
-              Подготовка настроек подключения. Модель и инструменты подключим на
-              следующем этапе.
-            </p>
-            <label className="field">
-              Размещение модели
-              <select
-                value={profile.mode}
-                onChange={(event) => {
-                  setProfile({ ...profile, mode: event.target.value });
-                  setSavedProfile(null);
-                }}
-              >
-                <option value="remote">Внешний API</option>
-                <option value="local">Локальный API</option>
-              </select>
-            </label>
-            <label className="field">
-              Адрес API
-              <input
-                type="url"
-                placeholder={
-                  profile.mode === "local"
-                    ? "http://localhost:1234/v1"
-                    : "https://api.example.com/v1"
-                }
-                value={profile.endpoint}
-                onChange={(event) => {
-                  setProfile({ ...profile, endpoint: event.target.value });
-                  setSavedProfile(null);
-                }}
-              />
-            </label>
-            <label className="field">
-              Название модели
-              <input
-                placeholder="Идентификатор модели на сервере"
-                value={profile.model}
-                onChange={(event) => {
-                  setProfile({ ...profile, model: event.target.value });
-                  setSavedProfile(null);
-                }}
-              />
-            </label>
-            <h3 className="tools-title">Инструменты агента</h3>
-            <div className="tool-row">
-              <span>
-                <FileText size={15} />
-                Чтение PDF
-              </span>
-              <span>Запланирован</span>
-            </div>
-            <div className="tool-row">
-              <span>
-                <ScanLine size={15} />
-                Распознавание обозначений
-              </span>
-              <span>Запланирован</span>
-            </div>
-            <div className="tool-row">
-              <span>
-                <Box size={15} />
-                Проверка поверхностей
-              </span>
-              <span>Запланирован</span>
-            </div>
-            <p className="settings-status" role="status">
-              {savedProfile
-                ? "Настройки сохранены до закрытия страницы. Подключение не выполнялось."
-                : "Ключ API пока не требуется. Запросы не отправляются."}
-            </p>
-            <button className="button primary" type="submit">
-              Сохранить для этого сеанса
-            </button>
-          </form>
+          <ModelSettings connection={connection} />
         ) : dialog === "projects" ? (
           <>
             <p className="modal-intro">
@@ -779,11 +706,15 @@ export default function App() {
         ) : (
           <>
             <p className="modal-intro">
-              Первый шаг проектирования приложения для чтения инженерных
-              чертежей.
+              Локальное приложение для работы с инженерными чертежами и
+              подключения Kimi API.
             </p>
             <ul className="help-list">
               <li>Откройте PDF для локального просмотра.</li>
+              <li>
+                В разделе «Модель и инструменты» сохраните API-ключ Kimi и
+                запустите проверки подключения.
+              </li>
               <li>
                 В учебном примере выберите поверхность: её граница подсветится
                 на эскизе.
@@ -794,7 +725,7 @@ export default function App() {
               </li>
             </ul>
             <p className="detail-explanation">
-              Распознавание, проверка геометрии, постоянное хранение и экспорт
+              Распознавание, проверка геометрии, библиотека проектов и экспорт
               JSON ещё не подключены. Учебные значения не относятся к
               загруженным PDF.
             </p>

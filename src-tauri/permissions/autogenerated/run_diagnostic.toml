@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-run-diagnostic"
+description = "Enables the run_diagnostic command without any pre-configured scope."
+commands.allow = ["run_diagnostic"]
+
+[[permission]]
+identifier = "deny-run-diagnostic"
+description = "Denies the run_diagnostic command without any pre-configured scope."
+commands.deny = ["run_diagnostic"]

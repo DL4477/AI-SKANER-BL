@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Local interface only; no filesystem, shell or network plugins",
+  "description": "Main window can manage the Kimi credential and run bounded diagnostics. No arbitrary filesystem or HTTP access.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "allow-model-status", "allow-save-api-key", "allow-remove-api-key", "allow-run-diagnostic", "allow-cancel-diagnostic"]
 }

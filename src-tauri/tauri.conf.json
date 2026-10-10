@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "ИИ СКАНЕР",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "io.github.dl4477.ai-skaner",
   "build": {
     "frontendDist": "../src/ui/dist",
