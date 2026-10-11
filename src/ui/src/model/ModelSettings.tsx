@@ -43,8 +43,8 @@ export default function ModelSettings({
         </p>
       </div>
       <p className="connection-notice">
-        Анализ чертежей: высокий уровень рассуждения. Лимит генерации — 16 384
-        токена.
+        Анализ чертежей: высокий уровень рассуждения. Лимит генерации — 50 000
+        токенов.
       </p>
       {!c.desktopAvailable && (
         <p className="connection-notice" role="status">

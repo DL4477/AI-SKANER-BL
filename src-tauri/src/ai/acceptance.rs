@@ -21,8 +21,12 @@ async fn compare_prepared_drawing_with_saved_key() {
         .expect("Save a Kimi key in the app first");
     let client = KimiClient::new().unwrap();
     let mut failures = 0;
-    // Keep measurements for different effort levels in separate files.
-    for variant in [format!("native_text_no_ocr_{}", analysis::REASONING_EFFORT)] {
+    // Keep measurements for different effort levels and token limits in separate files.
+    for variant in [format!(
+        "native_text_no_ocr_{}_{}",
+        analysis::REASONING_EFFORT,
+        analysis::MAX_COMPLETION_TOKENS
+    )] {
         let result_path = path.with_extension(format!("{variant}.kimi.json"));
         let error_path = path.with_extension(format!("{variant}.error.json"));
         if error_path.exists() {
@@ -48,8 +52,9 @@ async fn compare_prepared_drawing_with_saved_key() {
         .unwrap();
         analysis::validate_input(&input).unwrap();
         eprintln!(
-            "{variant}: starting one paid request; reasoning_effort={}",
-            analysis::REASONING_EFFORT
+            "{variant}: starting one paid request; reasoning_effort={}, max_completion_tokens={}",
+            analysis::REASONING_EFFORT,
+            analysis::MAX_COMPLETION_TOKENS
         );
         match client.analyze(&input, &key, |_| {}).await {
             Ok(report) => {
