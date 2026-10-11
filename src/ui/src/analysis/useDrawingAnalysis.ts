@@ -1,8 +1,8 @@
-import { useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useRef, useState } from "react";
+import { Channel, invoke } from "@tauri-apps/api/core";
 import { connectionError, modelApi } from "../model/connection";
 import { prepareDrawing } from "./prepareDrawing";
-import type { AnalysisReport, DrawingSource } from "./types";
+import type { AnalysisProgress, AnalysisReport, DrawingSource } from "./types";
 
 export function useDrawingAnalysis(
   log: (message: string) => void,
@@ -14,6 +14,8 @@ export function useDrawingAnalysis(
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const startedAt = useRef(0);
   const savePending = useRef(false);
   const job = useRef<{
     id: string;
@@ -21,11 +23,22 @@ export function useDrawingAnalysis(
     sent: boolean;
   } | null>(null);
 
+  useEffect(() => {
+    if (!busy) return;
+    const timer = setInterval(
+      () =>
+        setElapsedSeconds(Math.floor((Date.now() - startedAt.current) / 1000)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [busy]);
+
   function reset() {
     if (job.current) return false;
     setReport(null);
     setError("");
     setProgress("");
+    setElapsedSeconds(0);
     return true;
   }
 
@@ -37,6 +50,8 @@ export function useDrawingAnalysis(
       sent: false,
     };
     job.current = current;
+    startedAt.current = Date.now();
+    setElapsedSeconds(0);
     setBusy(true);
     setCancelling(false);
     setError("");
@@ -52,12 +67,29 @@ export function useDrawingAnalysis(
       current.abort.signal.throwIfAborted();
       current.sent = true;
       setProgress(
-        `Kimi анализирует ${pages.length} лист(а). Ожидание — до 4 минут…`,
+        `Подключение к Kimi · ${pages.length} лист(а). Лимит анализа — 15 минут…`,
       );
       log(`Запрошен анализ в Kimi: ${pages.length} лист(а).`);
+      let lastPhase = "";
+      const onProgress = new Channel<AnalysisProgress>((event) => {
+        if (current.abort.signal.aborted || job.current !== current) return;
+        const messages = {
+          connecting: "Подключаемся к Kimi и передаём чертёж…",
+          waiting: "Соединение с Kimi открыто. Ожидаем начало генерации…",
+          thinking: "Kimi обрабатывает чертёж. Данные от модели поступают…",
+          receiving: `Получаем JSON от Kimi · ${(event.contentBytes / 1024).toFixed(1)} КБ…`,
+          validating: "Ответ получен. Проверяем структуру JSON и ссылки…",
+        };
+        setProgress(messages[event.phase]);
+        if (event.phase !== lastPhase) {
+          log(messages[event.phase]);
+          lastPhase = event.phase;
+        }
+      });
       const result = await invoke<AnalysisReport>("analyze_drawing", {
         requestId: current.id,
         input: { name: source.name, kind: source.kind, pages },
+        onProgress,
       });
       if (current.abort.signal.aborted || job.current !== current) return;
       setReport(result);
@@ -80,11 +112,14 @@ export function useDrawingAnalysis(
         setError(message);
         setProgress("");
       }
-      log(message);
+      log(
+        `${message} Прошло ${Math.round((Date.now() - startedAt.current) / 1000)} с.`,
+      );
     } finally {
       if (job.current === current) {
         if (current.abort.signal.aborted) setProgress("Анализ остановлен.");
         job.current = null;
+        setElapsedSeconds(Math.round((Date.now() - startedAt.current) / 1000));
         setBusy(false);
         setCancelling(false);
       }
@@ -111,7 +146,9 @@ export function useDrawingAnalysis(
     setSaving(true);
     setError("");
     try {
-      const saved = await invoke<boolean>("save_analysis", { data: report.data });
+      const saved = await invoke<boolean>("save_analysis", {
+        data: report.data,
+      });
       if (saved) log("Черновик JSON сохранён в выбранный файл.");
     } catch (failure) {
       setError(connectionError(failure).message);
@@ -132,5 +169,6 @@ export function useDrawingAnalysis(
     reset,
     download,
     saving,
+    elapsedSeconds,
   };
 }

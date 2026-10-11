@@ -344,6 +344,12 @@ export default function App() {
                   <LoaderCircle size={16} className="loading-spinner" />
                 )}
                 <span>{analysis.error || analysis.progress}</span>
+                {!analysis.report && (
+                  <small>
+                    Прошло {Math.floor(analysis.elapsedSeconds / 60)}:
+                    {String(analysis.elapsedSeconds % 60).padStart(2, "0")}
+                  </small>
+                )}
                 {analysis.report && (
                   <small>
                     {(analysis.report.elapsedMs / 1000).toFixed(1)} с
@@ -677,13 +683,19 @@ export default function App() {
                 <span>
                   {analysis.report
                     ? "Черновик Kimi · требуется проверка"
-                    : demo
-                      ? "Данные примера заданы вручную"
-                      : "Распознавание ещё не запускалось"}
+                    : analysis.busy
+                      ? "Идёт анализ чертежа"
+                      : analysis.error || analysis.progress
+                        ? "Анализ не завершён"
+                        : demo
+                          ? "Данные примера заданы вручную"
+                          : "Распознавание ещё не запускалось"}
                 </span>
                 <button
                   className="button export-button"
-                  disabled={!analysis.report || analysis.busy || analysis.saving}
+                  disabled={
+                    !analysis.report || analysis.busy || analysis.saving
+                  }
                   onClick={analysis.download}
                   title="Сохранить черновик JSON; готовность к построению 3D не подтверждена"
                 >
@@ -754,7 +766,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.3</span>
+              ИИ СКАНЕР <span className="version">0.3.1</span>
             </span>
           </footer>
         </main>

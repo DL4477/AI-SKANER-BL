@@ -103,7 +103,8 @@ pub fn request_body(input: &AnalysisInput, model: &str) -> Value {
         content.push(json!({"type":"image_url","image_url":{"url":page.image}}));
     }
     json!({
-        "model": model, "reasoning_effort":"low", "max_completion_tokens":16384, "stream":false,
+        "model": model, "reasoning_effort":"low", "max_completion_tokens":16384, "stream":true,
+        "stream_options":{"include_usage":true},
         "messages":[{"role":"system","content":SYSTEM_PROMPT},{"role":"user","content":content}],
         "response_format":{"type":"json_schema","json_schema":{"name":"drawing_analysis","strict":true,"schema":schema()}}
     })

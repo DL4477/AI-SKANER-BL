@@ -1,5 +1,6 @@
 use super::analysis::{self, AnalysisInput, AnalysisReport};
 use super::error::{AiError, AiResult};
+use super::stream::{AnalysisPhase, AnalysisProgress, StreamDecoder};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use reqwest::{Client, Response, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -31,21 +32,82 @@ pub struct DiagnosticReport {
 pub struct KimiClient {
     http: Client,
     base_url: String,
+    analysis_limits: AnalysisLimits,
+}
+
+#[derive(Clone, Copy)]
+struct AnalysisLimits {
+    total: Duration,
+    idle: Duration,
+}
+impl Default for AnalysisLimits {
+    fn default() -> Self {
+        Self {
+            total: Duration::from_secs(900),
+            idle: Duration::from_secs(180),
+        }
+    }
 }
 
 impl KimiClient {
-    pub async fn analyze(&self, input: &AnalysisInput, key: &str) -> AiResult<AnalysisReport> {
+    pub async fn analyze(
+        &self,
+        input: &AnalysisInput,
+        key: &str,
+        progress: impl Fn(AnalysisProgress) + Send,
+    ) -> AiResult<AnalysisReport> {
         let started = Instant::now();
-        let response = self
+        progress(AnalysisProgress {
+            phase: AnalysisPhase::Connecting,
+            content_bytes: 0,
+        });
+        let request = self
             .http
             .post(format!("{}/chat/completions", self.base_url))
-            .timeout(Duration::from_secs(240))
+            .timeout(self.analysis_limits.total)
             .bearer_auth(key)
             .json(&analysis::request_body(input, MODEL))
-            .send()
+            .send();
+        let mut response = tokio::time::timeout(self.analysis_limits.idle, request)
             .await
-            .map_err(network_error)?;
-        let value = read_response(response).await?;
+            .map_err(|_| analysis_idle_error())?
+            .map_err(analysis_network_error)?;
+        if !response.status().is_success() {
+            return Err(status_error(response.status()));
+        }
+        if !response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .is_some_and(|v| v.starts_with("text/event-stream"))
+        {
+            return Err(AiError::invalid_response());
+        }
+        let mut decoder = StreamDecoder::default();
+        progress(decoder.progress());
+        let mut last_phase = decoder.phase;
+        let mut last_update = Instant::now();
+        loop {
+            let chunk = tokio::time::timeout(self.analysis_limits.idle, response.chunk())
+                .await
+                .map_err(|_| analysis_idle_error())?
+                .map_err(analysis_network_error)?;
+            let Some(chunk) = chunk else { break };
+            decoder.push(&chunk)?;
+            if decoder.phase != last_phase || last_update.elapsed() >= Duration::from_secs(1) {
+                progress(decoder.progress());
+                last_phase = decoder.phase;
+                last_update = Instant::now();
+            }
+            if decoder.done {
+                break;
+            }
+        }
+        progress(AnalysisProgress {
+            phase: AnalysisPhase::Validating,
+            content_bytes: decoder.progress().content_bytes,
+        });
+        let value = decoder.finish()?;
         let data = analysis::parse_output(&value, input)?;
         Ok(AnalysisReport {
             data,
@@ -59,6 +121,7 @@ impl KimiClient {
         Ok(Self {
             http: build_http_client(Duration::from_secs(90))?,
             base_url: ENDPOINT.into(),
+            analysis_limits: AnalysisLimits::default(),
         })
     }
 
@@ -94,7 +157,7 @@ fn build_http_client(timeout: Duration) -> AiResult<Client> {
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .user_agent("AI-SKANER/0.3.0")
+        .user_agent("AI-SKANER/0.3.1")
         .build()
         .map_err(|_| {
             AiError::new(
@@ -102,6 +165,28 @@ fn build_http_client(timeout: Duration) -> AiResult<Client> {
                 "Не удалось подготовить сетевое подключение.",
             )
         })
+}
+
+fn analysis_idle_error() -> AiError {
+    AiError::new(
+        "analysis_idle",
+        "От Kimi не поступало данных 3 минуты. Ожидание остановлено; проверьте соединение и повторите позже.",
+    )
+}
+fn analysis_network_error(error: reqwest::Error) -> AiError {
+    if error.is_timeout() && error.is_connect() {
+        AiError::new(
+            "connect_timeout",
+            "Не удалось установить соединение с Kimi за 10 секунд. Проверьте интернет.",
+        )
+    } else if error.is_timeout() {
+        AiError::new(
+            "analysis_timeout",
+            "Достигнут лимит анализа — 15 минут. Готовый JSON не получен. Для этого чертежа потребуется поэтапный разбор.",
+        )
+    } else {
+        network_error(error)
+    }
 }
 
 fn network_error(error: reqwest::Error) -> AiError {
@@ -268,7 +353,7 @@ fn validate_response(kind: DiagnosticKind, value: &Value) -> AiResult<&'static s
             })?;
             if output == json!({"status": "ready"}) {
                 Ok(
-                    "Получен JSON, соответствующий тестовой схеме. Схема чертежа будет подключена отдельно.",
+                    "Получен JSON, соответствующий тестовой схеме. Анализ чертежа проверяется отдельно.",
                 )
             } else {
                 Err(AiError::new(

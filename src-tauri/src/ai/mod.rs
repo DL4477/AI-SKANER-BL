@@ -1,9 +1,11 @@
 mod analysis;
 mod error;
 mod kimi;
+mod stream;
 mod vault;
 
 use analysis::{AnalysisInput, AnalysisReport};
+use stream::AnalysisProgress;
 
 use error::{AiError, AiResult};
 use kimi::{DiagnosticKind, DiagnosticReport, ENDPOINT, KimiClient, MODEL};
@@ -47,13 +49,18 @@ pub struct AiService {
 }
 
 impl AiService {
-    async fn analyze(&self, input: AnalysisInput, request_id: &str) -> AiResult<AnalysisReport> {
+    async fn analyze(
+        &self,
+        input: AnalysisInput,
+        request_id: &str,
+        progress: impl Fn(AnalysisProgress) + Send,
+    ) -> AiResult<AnalysisReport> {
         analysis::validate_input(&input)?;
         let (key, mut cancellation) = self.begin(request_id)?;
         let result = tokio::select! {
             biased;
             _ = cancellation.changed() => Err(AiError::cancelled()),
-            result = self.client.analyze(&input, &key) => result,
+            result = self.client.analyze(&input, &key, progress) => result,
         };
         self.operations.lock().map_err(|_| AiError::busy())?.active = None;
         result
@@ -181,9 +188,14 @@ pub fn cancel_diagnostic(request_id: String, state: State<'_, AiService>) -> AiR
 pub async fn analyze_drawing(
     input: AnalysisInput,
     request_id: String,
+    on_progress: tauri::ipc::Channel<AnalysisProgress>,
     state: State<'_, AiService>,
 ) -> AiResult<AnalysisReport> {
-    state.analyze(input, &request_id).await
+    state
+        .analyze(input, &request_id, |progress| {
+            let _ = on_progress.send(progress);
+        })
+        .await
 }
 
 #[cfg(test)]

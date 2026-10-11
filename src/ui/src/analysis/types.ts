@@ -55,6 +55,10 @@ export type AnalysisReport = {
   totalTokens: number | null;
   model: string;
 };
+export type AnalysisProgress = {
+  phase: "connecting" | "waiting" | "thinking" | "receiving" | "validating";
+  contentBytes: number;
+};
 export type AnalysisPage = {
   page: number;
   width: number;

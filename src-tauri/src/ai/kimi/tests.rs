@@ -69,6 +69,7 @@ fn mock_server_with_delay(
         KimiClient {
             http: build_http_client(timeout).unwrap(),
             base_url: url,
+            analysis_limits: AnalysisLimits::default(),
         },
         handle,
     )
@@ -78,16 +79,140 @@ fn completion(content: &str) -> Value {
     json!({"choices":[{"finish_reason":"stop","message":{"content":content}}],"usage":{"total_tokens":12}})
 }
 
+fn stream_response(value: &Value) -> String {
+    format!(
+        "data: {}\n\ndata: {}\n\ndata: [DONE]\n\n",
+        json!({"choices":[{"index":0,"delta":{"content":value.to_string()},"finish_reason":"stop"}]}),
+        json!({"choices":[],"usage":{"total_tokens":123}})
+    )
+}
+
+fn mock_live_stream(limits: AnalysisLimits) -> (KimiClient, thread::JoinHandle<()>) {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let base_url = format!("http://{}", listener.local_addr().unwrap());
+    let handle = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().unwrap();
+        stream
+            .set_read_timeout(Some(Duration::from_secs(3)))
+            .unwrap();
+        let mut received = Vec::new();
+        let mut buf = [0; 4096];
+        loop {
+            let n = stream.read(&mut buf).unwrap();
+            if n == 0 {
+                return;
+            }
+            received.extend_from_slice(&buf[..n]);
+            let text = String::from_utf8_lossy(&received);
+            if let Some(end) = text.find("\r\n\r\n") {
+                let length = text[..end]
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length: ")
+                            .and_then(|n| n.parse::<usize>().ok())
+                    })
+                    .unwrap_or(0);
+                if received.len() >= end + 4 + length {
+                    break;
+                }
+            }
+        }
+        let beginning = format!(
+            "data: {}\n\n",
+            json!({"choices":[{"index":0,"delta":{"reasoning_content":"not exposed"}}]})
+        );
+        let ending = stream_response(&crate::ai::analysis::tests::data());
+        let headers = format!(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/event-stream\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+            beginning.len() + ending.len()
+        );
+        let _ = stream.write_all(headers.as_bytes());
+        let _ = stream.write_all(beginning.as_bytes());
+        thread::sleep(Duration::from_millis(250));
+        let _ = stream.write_all(ending.as_bytes());
+    });
+    (
+        KimiClient {
+            http: build_http_client(Duration::from_millis(50)).unwrap(),
+            base_url,
+            analysis_limits: limits,
+        },
+        handle,
+    )
+}
+
+#[tokio::test]
+async fn streaming_analysis_has_own_deadline_and_reports_activity_before_completion() {
+    let (client, server) = mock_live_stream(AnalysisLimits {
+        total: Duration::from_secs(2),
+        idle: Duration::from_secs(1),
+    });
+    let updates = std::sync::Mutex::new(Vec::new());
+    let report = client
+        .analyze(&crate::ai::analysis::tests::input(), "fake-key", |p| {
+            updates.lock().unwrap().push(p);
+        })
+        .await
+        .unwrap();
+    let updates = updates.into_inner().unwrap();
+    assert!(updates.iter().any(|p| p.phase == AnalysisPhase::Thinking));
+    assert!(
+        updates
+            .iter()
+            .any(|p| p.phase == AnalysisPhase::Receiving && p.content_bytes > 0)
+    );
+    assert!(report.elapsed_ms >= 200);
+    assert_eq!(report.total_tokens, Some(123));
+    server.join().unwrap();
+}
+
+#[tokio::test]
+async fn stalled_stream_and_total_deadline_are_distinct_and_release_service() {
+    for (limits, code) in [
+        (
+            AnalysisLimits {
+                total: Duration::from_secs(2),
+                idle: Duration::from_millis(100),
+            },
+            "analysis_idle",
+        ),
+        (
+            AnalysisLimits {
+                total: Duration::from_millis(100),
+                idle: Duration::from_secs(2),
+            },
+            "analysis_timeout",
+        ),
+    ] {
+        let (client, server) = mock_live_stream(limits);
+        let mut service = crate::ai::tests::service();
+        service.client = client;
+        service.save_key("fake-stream-key".into()).unwrap();
+        let error = service
+            .analyze(
+                crate::ai::analysis::tests::input(),
+                "stream-timeout",
+                |_| {},
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(error.code, code);
+        service.remove_key().unwrap();
+        server.join().unwrap();
+    }
+}
+
 #[tokio::test]
 async fn drawing_analysis_roundtrip_validates_response_and_releases_service() {
     let value = crate::ai::analysis::tests::data();
-    let response = crate::ai::analysis::tests::completion(&value);
-    let (client, server) = mock_server("200 OK", "", response.to_string());
+    let response = stream_response(&value);
+    let (client, server) = mock_server("200 OK", "Content-Type: text/event-stream\r\n", response);
     let mut service = crate::ai::tests::service();
     service.client = client;
     service.save_key("fake-offline-key".into()).unwrap();
     let result = service
-        .analyze(crate::ai::analysis::tests::input(), "analysis-1")
+        .analyze(crate::ai::analysis::tests::input(), "analysis-1", |_| {})
         .await
         .unwrap();
     assert_eq!(result.data["surfaces"].as_array().unwrap().len(), 1);
@@ -98,6 +223,8 @@ async fn drawing_analysis_roundtrip_validates_response_and_releases_service() {
         body["response_format"]["json_schema"]["name"],
         "drawing_analysis"
     );
+    assert_eq!(body["stream"], true);
+    assert_eq!(body["stream_options"]["include_usage"], true);
     service.remove_key().unwrap();
 }
 
@@ -115,7 +242,7 @@ async fn drawing_analysis_can_be_cancelled_and_diagnostics_cannot_overlap() {
     service.client = client;
     service.save_key("fake-offline-key".into()).unwrap();
     let (result, _) = tokio::join!(
-        service.analyze(crate::ai::analysis::tests::input(), "analysis-1"),
+        service.analyze(crate::ai::analysis::tests::input(), "analysis-1", |_| {}),
         async {
             tokio::time::sleep(Duration::from_millis(100)).await;
             assert_eq!(service.begin("diagnostic-1").err().unwrap().code, "busy");
