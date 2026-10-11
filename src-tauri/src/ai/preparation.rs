@@ -246,7 +246,7 @@ mod tests {
         );
         let text = body.to_string();
         assert!(text.contains("H7") && text.contains("h7"));
-        assert_eq!(body["reasoning_effort"], "low");
+        assert_eq!(body["reasoning_effort"], "high");
         assert_eq!(body["max_completion_tokens"], 16384);
     }
     #[test]

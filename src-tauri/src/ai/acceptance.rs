@@ -21,7 +21,8 @@ async fn compare_prepared_drawing_with_saved_key() {
         .expect("Save a Kimi key in the app first");
     let client = KimiClient::new().unwrap();
     let mut failures = 0;
-    for variant in ["native_text_no_ocr"] {
+    // Keep measurements for different effort levels in separate files.
+    for variant in [format!("native_text_no_ocr_{}", analysis::REASONING_EFFORT)] {
         let result_path = path.with_extension(format!("{variant}.kimi.json"));
         let error_path = path.with_extension(format!("{variant}.error.json"));
         if error_path.exists() {
@@ -47,7 +48,8 @@ async fn compare_prepared_drawing_with_saved_key() {
         .unwrap();
         analysis::validate_input(&input).unwrap();
         eprintln!(
-            "{variant}: starting one paid request; identical model and generation parameters"
+            "{variant}: starting one paid request; reasoning_effort={}",
+            analysis::REASONING_EFFORT
         );
         match client.analyze(&input, &key, |_| {}).await {
             Ok(report) => {
@@ -59,10 +61,7 @@ async fn compare_prepared_drawing_with_saved_key() {
             }
             Err(error) => {
                 std::fs::write(error_path, serde_json::to_vec_pretty(&error).unwrap()).unwrap();
-                eprintln!(
-                    "{variant}: {} (saved; no automatic paid retry)",
-                    error.code
-                );
+                eprintln!("{variant}: {} (saved; no automatic paid retry)", error.code);
                 failures += 1;
             }
         }

@@ -785,7 +785,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.4.1</span>
+              ИИ СКАНЕР <span className="version">0.4.2</span>
             </span>
           </footer>
         </main>

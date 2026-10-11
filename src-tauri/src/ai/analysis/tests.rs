@@ -132,6 +132,7 @@ fn request_contains_all_pages_schema_and_no_manual_surface_answers() {
     );
     assert_eq!(request["response_format"]["json_schema"]["strict"], true);
     assert_eq!(request["max_completion_tokens"], 16384);
+    assert_eq!(request["reasoning_effort"], "high");
     assert!(!request.to_string().contains("Ø40"));
 }
 

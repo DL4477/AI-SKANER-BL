@@ -42,6 +42,10 @@ export default function ModelSettings({
           {c.info.endpoint} · {c.info.model}
         </p>
       </div>
+      <p className="connection-notice">
+        Анализ чертежей: высокий уровень рассуждения. Лимит генерации — 16 384
+        токена.
+      </p>
       {!c.desktopAvailable && (
         <p className="connection-notice" role="status">
           Подключение доступно в установленном приложении «ИИ СКАНЕР». В
@@ -131,7 +135,8 @@ export default function ModelSettings({
       <h3 className="tools-title">Проверки подключения</h3>
       <p className="probe-intro">
         Запускаются вручную. Текст, изображение и JSON — по одному платному
-        запросу к API. Для них нужен баланс в кабинете Kimi.
+        запросу к API. Для них нужен баланс в кабинете Kimi. Проверки
+        подключения используют низкий уровень рассуждения.
       </p>
       <div className="probe-list">
         {probes.map(({ kind, description }) => {
