@@ -1,7 +1,7 @@
 import type { Box, Point, Polygon, TextRegion } from "./types";
 
 export const SETTINGS_KEY =
-  "pdfjs-300dpi-2000px-overlap15-rapid-v5-eslav-review600-tess-rus-eng-v1";
+  "pdfjs-300dpi-2000px-overlap15-native-text-no-ocr-v2";
 export function tileBoxes(
   width: number,
   height: number,

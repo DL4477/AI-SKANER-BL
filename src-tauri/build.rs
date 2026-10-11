@@ -8,10 +8,6 @@ fn main() {
             "cancel_diagnostic",
             "analyze_drawing",
             "save_analysis",
-            "ocr_begin",
-            "ocr_image",
-            "ocr_cancel",
-            "ocr_end",
         ]),
     ))
     .expect("failed to build desktop permissions");

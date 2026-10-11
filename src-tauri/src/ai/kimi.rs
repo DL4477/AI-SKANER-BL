@@ -157,7 +157,7 @@ fn build_http_client(timeout: Duration) -> AiResult<Client> {
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .user_agent("AI-SKANER/0.4.0")
+        .user_agent("AI-SKANER/0.4.1")
         .build()
         .map_err(|_| {
             AiError::new(

@@ -344,8 +344,8 @@ export default function App() {
           </div>
           <p className="analysis-disclosure">
             «Подготовить PDF» читает документ локально. «Разобрать чертёж»
-            передаёт изображения листов, фрагменты и текст OCR в Kimi. Запрос
-            платный; результат требует проверки.
+            передаёт изображения листов, фрагменты и встроенный текст PDF (OCR
+            отключён) в Kimi. Запрос платный; результат требует проверки.
           </p>
           {(analysis.busy || analysis.progress || analysis.error) && (
             <div
@@ -785,7 +785,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.4.0</span>
+              ИИ СКАНЕР <span className="version">0.4.1</span>
             </span>
           </footer>
         </main>

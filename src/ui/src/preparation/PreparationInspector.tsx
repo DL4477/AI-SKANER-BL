@@ -19,12 +19,12 @@ export default function PreparationInspector({
     <details className="preparation-panel">
       <summary>
         Локальная подготовка · {data.pages.length} лист(а) ·{" "}
-        {data.regions.length} текстовых областей · {disputed.length} требуют
-        внимания
+        {data.regions.length} областей текста PDF · OCR отключён
       </summary>
       <p>
-        OCR помогает прочитать надписи. Совпадение вариантов не подтверждает
-        правильность размера или его привязку к поверхности.
+        OCR отключён. Показан встроенный текст PDF с исходными фрагментами.
+        Текстовый слой может содержать ошибки; сканы передаются Kimi как
+        изображения.
       </p>
       {data.status !== "complete" && (
         <p role="alert">
@@ -34,17 +34,19 @@ export default function PreparationInspector({
         </p>
       )}
       <div className="preparation-toolbar">
-        <label>
-          <input
-            type="checkbox"
-            checked={conflictsOnly}
-            onChange={(e) => {
-              setConflictsOnly(e.target.checked);
-              setLimit(50);
-            }}
-          />{" "}
-          Только области с замечаниями
-        </label>
+        {disputed.length > 0 && (
+          <label>
+            <input
+              type="checkbox"
+              checked={conflictsOnly}
+              onChange={(e) => {
+                setConflictsOnly(e.target.checked);
+                setLimit(50);
+              }}
+            />{" "}
+            Только области с замечаниями
+          </label>
+        )}
         <small>
           {(data.elapsedMs / 1000).toFixed(1)} с · {data.fragments.length}{" "}
           фрагментов · CPU
@@ -76,7 +78,7 @@ export default function PreparationInspector({
         <div className="preparation-reading">
           {region ? (
             <>
-              <h3>Лист {region.page} · варианты чтения</h3>
+              <h3>Лист {region.page} · текст PDF</h3>
               {region.readings.map((r, i) => (
                 <div key={i}>
                   <strong>{r.engine === "pdf" ? "Текст PDF" : r.engine}</strong>
@@ -114,8 +116,7 @@ export default function PreparationInspector({
             </>
           ) : (
             <p>
-              Выберите надпись, чтобы посмотреть варианты чтения и исходные
-              фрагменты.
+              Выберите надпись, чтобы посмотреть текст PDF и исходные фрагменты.
             </p>
           )}
         </div>
@@ -129,7 +130,7 @@ export default function PreparationInspector({
         </ul>
         <p>
           Листов завершено: {data.coverage.pagesCompleted}/
-          {data.coverage.pagesTotal}. Фрагментов прочитано:{" "}
+          {data.coverage.pagesTotal}. Фрагментов подготовлено:{" "}
           {data.coverage.tilesCompleted}; повторных проверок:{" "}
           {data.coverage.reviewsCompleted}.
         </p>

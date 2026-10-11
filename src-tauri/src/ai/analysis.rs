@@ -87,7 +87,7 @@ pub fn validate_input(input: &AnalysisInput) -> AiResult<()> {
         }
     }
     super::preparation::validate(input)?;
-    // Bound the actual serialized request, including base64, OCR and the schema.
+    // Bound the actual serialized request, including base64, PDF text and the schema.
     if serde_json::to_vec(&request_body(input, super::kimi::MODEL))
         .map_err(|_| invalid())?
         .len()

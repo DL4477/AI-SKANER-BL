@@ -84,7 +84,6 @@ export function useDrawingAnalysis(
           setPrepared(null);
           preparation = await preparePdf(
             source,
-            current.id,
             current.abort.signal,
             setProgress,
             setPrepared,
@@ -106,7 +105,7 @@ export function useDrawingAnalysis(
         setProgress(
           `Подготовка завершена · ${pages.length} лист(а). Запросов к Kimi не было.`,
         );
-        log("PDF подготовлен локально. Результаты OCR доступны для просмотра.");
+        log("PDF подготовлен локально. Изображения и текст PDF доступны для просмотра. OCR отключён.");
         return;
       }
       if (preparation) {
@@ -192,7 +191,6 @@ export function useDrawingAnalysis(
     if (!current || cancelling) return;
     setCancelling(true);
     current.abort.abort();
-    await invoke("ocr_cancel", { requestId: current.id }).catch(() => {});
     if (current.sent) {
       try {
         await modelApi.cancel(current.id);

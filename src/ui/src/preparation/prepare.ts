@@ -5,26 +5,9 @@ import {
   type PDFPageProxy,
 } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-import { invoke } from "@tauri-apps/api/core";
 import type { DrawingSource } from "../analysis/types";
-import {
-  bounds,
-  comparable,
-  expandBox,
-  mergeRegion,
-  overlap,
-  pagePolygon,
-  SETTINGS_KEY,
-  tileBoxes,
-} from "./geometry";
-import type {
-  Box,
-  Fragment,
-  OcrResult,
-  Polygon,
-  PreparedDrawing,
-  TextRegion,
-} from "./types";
+import { bounds, overlap, SETTINGS_KEY, tileBoxes } from "./geometry";
+import type { Box, Fragment, Polygon, PreparedDrawing } from "./types";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 const MIB = 1024 * 1024;
@@ -33,7 +16,6 @@ const MAX_REGIONS = 20000;
 
 export async function preparePdf(
   source: DrawingSource,
-  requestId: string,
   signal: AbortSignal,
   progress: (text: string) => void,
   onPartial?: (data: PreparedDrawing) => void,
@@ -55,7 +37,9 @@ export async function preparePdf(
     pageInfo: [],
     fragments: [],
     regions: [],
-    warnings: [],
+    warnings: [
+      "OCR отключён. Используются изображения и встроенный текст PDF; повторные проверки OCR не выполняются.",
+    ],
     engines: {},
     elapsedMs: 0,
     status: "preparing",
@@ -91,10 +75,8 @@ export async function preparePdf(
   };
   const abort = () => {
     void task.destroy();
-    void invoke("ocr_cancel", { requestId }).catch(() => {});
   };
   signal.addEventListener("abort", abort, { once: true });
-  let begun = false;
   try {
     const pdf = await task.promise;
     signal.throwIfAborted();
@@ -107,8 +89,6 @@ export async function preparePdf(
       { length: pdf.numPages },
       (_, i) => i + 1,
     );
-    await invoke("ocr_begin", { requestId });
-    begun = true;
     signal.throwIfAborted();
     for (let n = 1; n <= pdf.numPages; n++) {
       signal.throwIfAborted();
@@ -174,7 +154,7 @@ export async function preparePdf(
         signal.throwIfAborted();
         textLayer = "error";
         result.warnings.push(
-          `Лист ${n}: текстовый слой не удалось извлечь; используются изображения и OCR.`,
+          `Лист ${n}: текстовый слой не удалось извлечь; используются только изображения.`,
         );
       }
       result.pageInfo.push({
@@ -198,7 +178,7 @@ export async function preparePdf(
       for (let i = 0; i < boxes.length; i++) {
         signal.throwIfAborted();
         progress(
-          `OCR · лист ${n}/${pdf.numPages} · фрагмент ${i + 1}/${boxes.length}`,
+          `Подготовка фрагментов · лист ${n}/${pdf.numPages} · фрагмент ${i + 1}/${boxes.length}`,
         );
         const box: Box = [
           boxes[i][0] / width,
@@ -218,73 +198,11 @@ export async function preparePdf(
         };
         account(picture.image);
         result.fragments.push(fragment);
-        const reading = await invoke<OcrResult>("ocr_image", {
-          requestId,
-          image: picture.image,
-          mode: "primary",
-          dpi: fragment.dpi,
-        });
-        signal.throwIfAborted();
-        result.engines = reading.engines;
-        addReadings(result.regions, reading, fragment);
+        for (const region of result.regions) {
+          if (region.page === n && overlap(bounds(region.polygon), box) > 0)
+            region.fragmentIds.push(fragment.id);
+        }
         result.coverage.tilesCompleted++;
-        if (result.regions.length > MAX_REGIONS)
-          throw new Error(
-            "Слишком много текстовых областей. Подготовка остановлена без усечения.",
-          );
-      }
-      const candidates = result.regions.filter(
-        (r) =>
-          r.page === n &&
-          (r.reasons.length ||
-            !r.readings.some((v) => v.engine === "rapidocr") ||
-            r.readings.some(
-              (v) => v.engine === "rapidocr" && (v.confidence ?? 0) < 0.85,
-            )),
-      );
-      const reviewed: Box[] = [];
-      for (const region of candidates) {
-        signal.throwIfAborted();
-        const box = expandBox(
-          bounds(region.polygon),
-          8 / natural.width,
-          5 / natural.height,
-        );
-        if (reviewed.some((b) => overlap(b, box) > 0.85)) continue;
-        reviewed.push(box);
-        progress(
-          `Проверка спорных областей · лист ${n}/${pdf.numPages} · область ${reviewed.length}/${candidates.length}`,
-        );
-        const reviewScale = Math.min(
-          600 / 72,
-          2000 / ((box[2] - box[0]) * natural.width),
-          2000 / ((box[3] - box[1]) * natural.height),
-        );
-        const picture = await render(page, box, reviewScale, signal);
-        const fragment: Fragment = {
-          id: `p${n}-review-${reviewed.length}`,
-          page: n,
-          bbox: box,
-          dpi: reviewScale * 72,
-          rotation: natural.rotation,
-          purpose: "review",
-          ...picture,
-        };
-        account(picture.image);
-        result.fragments.push(fragment);
-        const reading = await invoke<OcrResult>("ocr_image", {
-          requestId,
-          image: picture.image,
-          mode: "secondary",
-          dpi: fragment.dpi,
-        });
-        signal.throwIfAborted();
-        result.engines = reading.engines;
-        region.fragmentIds.push(fragment.id);
-        if (!reading.regions.length)
-          region.reasons.push("Tesseract не прочитал область");
-        addReadings(result.regions, reading, fragment);
-        result.coverage.reviewsCompleted++;
         if (result.regions.length > MAX_REGIONS)
           throw new Error(
             "Слишком много текстовых областей. Подготовка остановлена без усечения.",
@@ -332,59 +250,7 @@ export async function preparePdf(
     throw error;
   } finally {
     signal.removeEventListener("abort", abort);
-    if (begun) await invoke("ocr_end", { requestId }).catch(() => {});
     await task.destroy();
-  }
-}
-
-function addReadings(
-  regions: TextRegion[],
-  response: OcrResult,
-  fragment: Fragment,
-) {
-  for (const [i, value] of response.regions.entries()) {
-    const reasons = [];
-    if (!value.text.trim())
-      reasons.push("Обнаружена область без прочитанного текста");
-    if (value.engine === "rapidocr" && (value.confidence ?? 0) < 0.85)
-      reasons.push("Низкая оценка OCR");
-    const polygon = pagePolygon(
-      value.polygon,
-      fragment.bbox,
-      fragment.width,
-      fragment.height,
-    );
-    const pdf = regions.filter(
-      (r) =>
-        r.page === fragment.page &&
-        r.readings.some((v) => v.engine === "pdf") &&
-        overlap(bounds(r.polygon), bounds(polygon)) > 0.7,
-    );
-    if (
-      pdf.length &&
-      !pdf.some((r) =>
-        r.readings.some(
-          (v) =>
-            v.engine === "pdf" && comparable(v.text) === comparable(value.text),
-        ),
-      )
-    )
-      reasons.push("Расхождение с текстовым слоем PDF");
-    mergeRegion(regions, {
-      id: `${fragment.id}-${value.engine}-${i}`,
-      page: fragment.page,
-      polygon,
-      readings: [
-        {
-          text: value.text,
-          engine: value.engine,
-          confidence: value.confidence,
-          rotation: value.rotation,
-        },
-      ],
-      fragmentIds: [fragment.id],
-      reasons,
-    });
   }
 }
 

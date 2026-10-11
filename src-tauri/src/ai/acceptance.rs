@@ -1,4 +1,5 @@
-//! Explicitly opt-in, paid acceptance comparison. Never runs in normal cargo test.
+//! Explicitly opt-in, single paid run of the current no-OCR pipeline.
+//! Never runs in normal cargo test. Existing results are never overwritten.
 use super::{
     analysis::{self, AnalysisInput},
     kimi::KimiClient,
@@ -20,7 +21,7 @@ async fn compare_prepared_drawing_with_saved_key() {
         .expect("Save a Kimi key in the app first");
     let client = KimiClient::new().unwrap();
     let mut failures = 0;
-    for variant in ["overview", "tiles", "ocr"] {
+    for variant in ["native_text_no_ocr"] {
         let result_path = path.with_extension(format!("{variant}.kimi.json"));
         let error_path = path.with_extension(format!("{variant}.error.json"));
         if error_path.exists() {
@@ -38,11 +39,12 @@ async fn compare_prepared_drawing_with_saved_key() {
             .unwrap()
             .remove("pages")
             .unwrap();
-        if variant == "tiles" {
-            preparation["regions"] = serde_json::json!([]);
-            preparation["engines"] = serde_json::json!({});
-        }
-        let input:AnalysisInput=serde_json::from_value(serde_json::json!({"name":path.file_name().unwrap().to_string_lossy(),"kind":"pdf","pages":pages,"preparation":if variant=="overview" {Value::Null} else {preparation}})).unwrap();
+        let name = std::env::var("KIMI_ACCEPTANCE_NAME")
+            .unwrap_or_else(|_| path.file_name().unwrap().to_string_lossy().into_owned());
+        let input: AnalysisInput = serde_json::from_value(serde_json::json!({
+            "name":name,"kind":"pdf","pages":pages,"preparation":preparation
+        }))
+        .unwrap();
         analysis::validate_input(&input).unwrap();
         eprintln!(
             "{variant}: starting one paid request; identical model and generation parameters"
@@ -58,7 +60,7 @@ async fn compare_prepared_drawing_with_saved_key() {
             Err(error) => {
                 std::fs::write(error_path, serde_json::to_vec_pretty(&error).unwrap()).unwrap();
                 eprintln!(
-                    "{variant}: {} (saved; continuing the other comparison variants)",
+                    "{variant}: {} (saved; no automatic paid retry)",
                     error.code
                 );
                 failures += 1;
