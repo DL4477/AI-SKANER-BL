@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "ИИ СКАНЕР",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "identifier": "io.github.dl4477.ai-skaner",
   "build": {
     "frontendDist": "../src/ui/dist",
@@ -32,6 +32,7 @@
   },
   "bundle": {
     "active": true,
+    "resources": { "../.local/ocr-dist/ocr-worker/": "ocr/" },
     "targets": ["nsis"],
     "shortDescription": "Рабочее пространство для PDF-чертежей",
     "category": "Productivity",

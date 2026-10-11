@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import PreparationInspector from "./preparation/PreparationInspector";
 import {
   ArrowDownToLine,
   ArrowUpRight,
@@ -301,6 +302,17 @@ export default function App() {
                     ? "Повторить анализ"
                     : "Разобрать чертёж"}
               </button>
+              <button
+                className="button"
+                disabled={analysis.busy || demo || !connection.desktopAvailable}
+                onClick={() => {
+                  if (document)
+                    void analysis.run({ ...document, kind: "pdf" }, true);
+                }}
+                title="Прочитать PDF локально, без запроса к Kimi"
+              >
+                Подготовить PDF
+              </button>
             </div>
             <input
               ref={fileInput}
@@ -331,8 +343,9 @@ export default function App() {
             <span className="stage-note">Пробный анализ · до 8 листов</span>
           </div>
           <p className="analysis-disclosure">
-            По нажатию «Разобрать чертёж» изображения всех листов отправляются в
-            Kimi. Запрос платный. Результат нужно сверить с чертежом.
+            «Подготовить PDF» читает документ локально. «Разобрать чертёж»
+            передаёт изображения листов, фрагменты и текст OCR в Kimi. Запрос
+            платный; результат требует проверки.
           </p>
           {(analysis.busy || analysis.progress || analysis.error) && (
             <div
@@ -367,10 +380,10 @@ export default function App() {
                     void analysis.cancel();
                   }}
                 >
-                  {analysis.cancelling ? "Отмена…" : "Остановить анализ"}
+                  {analysis.cancelling ? "Отмена…" : "Остановить"}
                 </button>
               )}
-              {analysis.busy && (
+              {analysis.busy && !analysis.localOnly && (
                 <small>
                   Остановка прерывает ожидание; Kimi может учесть стоимость уже
                   принятого запроса.
@@ -385,6 +398,12 @@ export default function App() {
                 <X size={16} />
               </button>
             </div>
+          )}
+          {analysis.prepared && (
+            <PreparationInspector
+              key={analysis.prepared.checksum}
+              data={analysis.prepared}
+            />
           )}
 
           <div className="workspace-grid">
@@ -766,7 +785,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.3.1</span>
+              ИИ СКАНЕР <span className="version">0.4.0</span>
             </span>
           </footer>
         </main>

@@ -1,6 +1,9 @@
+#[cfg(test)]
+mod acceptance;
 mod analysis;
 mod error;
 mod kimi;
+mod preparation;
 mod stream;
 mod vault;
 

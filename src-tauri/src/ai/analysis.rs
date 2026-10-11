@@ -11,7 +11,7 @@ pub const SYSTEM_PROMPT: &str = r#"Ты анализируешь инженер�
 drawing_general хранит материал, единицы, общие указания и требования отдельно. Каждая поверхность хранит свои местные требования и ссылки general_requirement_ids только на применимые общие требования. Не дублируй общие требования как местные. Исключения и неоднозначную область действия отрази в questions. ID требований уникальны во всём документе.
 Размеры читай из обозначений, не измеряй картинку и не масштабируй её в миллиметры. geometry_parameters содержит численные значения, единицы и исходное обозначение. Неизвестное — null, никогда не ноль. derived допустимо лишь при однозначном выводе из размеров; укажи обоснование в evidence.description.
 IT относится к конкретному размеру: из H7 сохраняй IT7 и H7, но не вычисляй табличные отклонения без источника. Из ±0,1 нельзя угадывать IT. Шероховатость сохраняй с исходным параметром Ra/Rz, значением, единицами и областью действия. Сохраняй прочие допуски, покрытия, термообработку и требования в raw_text без потери смысла. Если единицы не указаны и неизвестны, null.
-evidence.page — номер листа с единицы. bbox — [x_min,y_min,x_max,y_max] в долях ширины и высоты именно переданного изображения с началом в левом верхнем углу; при неизвестной области null. Описание указывает вид/разрез/обозначение, позволяющее проверить утверждение.
+evidence.page — номер листа с единицы. bbox — [x_min,y_min,x_max,y_max] в долях ширины и высоты полного отображаемого листа с началом в левом верхнем углу; при неизвестной области null. Для дополнительного фрагмента учитывай его положение на полном листе. Описание указывает вид/разрез/обозначение, позволяющее проверить утверждение.
 Описывай границы и ориентацию поверхностей; не выдавай условное изображение резьбы за точную геометрию витков. Недостающую топологию, координаты и неразборчивые обозначения перечисляй как вопросы. Не выдумывай данные, чтобы заполнить схему. Если это не чертёж, surfaces=[], объясни причину в questions и summary.
 Это черновой визуальный анализ: status всегда needs_review, ready_for_3d всегда false. В summary кратко опиши найденную деталь и ограничения интерпретации."#;
 
@@ -30,6 +30,8 @@ pub struct AnalysisInput {
     pub name: String,
     pub kind: String,
     pub pages: Vec<AnalysisPage>,
+    #[serde(default)]
+    pub preparation: Option<Value>,
 }
 
 #[derive(Debug, Serialize)]
@@ -84,6 +86,18 @@ pub fn validate_input(input: &AnalysisInput) -> AiResult<()> {
             return Err(invalid());
         }
     }
+    super::preparation::validate(input)?;
+    // Bound the actual serialized request, including base64, OCR and the schema.
+    if serde_json::to_vec(&request_body(input, super::kimi::MODEL))
+        .map_err(|_| invalid())?
+        .len()
+        > 30 * 1024 * 1024
+    {
+        return Err(AiError::new(
+            "preparation_limit",
+            "Полный запрос превышает 30 МиБ. Документ не усечён и не отправлен в Kimi.",
+        ));
+    }
     Ok(())
 }
 
@@ -101,6 +115,9 @@ pub fn request_body(input: &AnalysisInput, model: &str) -> Value {
     for page in &input.pages {
         content.push(json!({"type":"text","text":format!("Лист {} из {}. Изображение {}×{} пикселей.",page.page,input.pages.len(),page.width,page.height)}));
         content.push(json!({"type":"image_url","image_url":{"url":page.image}}));
+    }
+    if let Some(prepared) = &input.preparation {
+        super::preparation::append_content(&mut content, prepared);
     }
     json!({
         "model": model, "reasoning_effort":"low", "max_completion_tokens":16384, "stream":true,

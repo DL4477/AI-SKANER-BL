@@ -11,6 +11,10 @@
     "allow-run-diagnostic",
     "allow-cancel-diagnostic",
     "allow-analyze-drawing",
-    "allow-save-analysis"
+    "allow-save-analysis",
+    "allow-ocr-begin",
+    "allow-ocr-image",
+    "allow-ocr-cancel",
+    "allow-ocr-end"
   ]
 }

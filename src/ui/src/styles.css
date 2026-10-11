@@ -1654,3 +1654,83 @@ h4 {
     min-height: 0;
   }
 }
+/* Local preparation remains a compact, inspectable layer above the drawing. */
+.preparation-panel {
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  background: #fff;
+  border: 1px solid #dce5e4;
+  border-radius: 14px;
+}
+.preparation-panel > summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #245b53;
+}
+.preparation-panel p,
+.preparation-panel small,
+.preparation-panel figcaption {
+  color: #667a76;
+  font-size: 12px;
+}
+.preparation-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 14px 0;
+  font-size: 13px;
+}
+.preparation-grid {
+  display: grid;
+  grid-template-columns: minmax(180px, 30%) minmax(0, 1fr);
+  gap: 20px;
+}
+.preparation-regions {
+  max-height: 440px;
+  overflow: auto;
+}
+.preparation-regions button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #f6f9f8;
+  border: 1px solid #e3ebe8;
+  width: 100%;
+  text-align: left;
+  margin-bottom: 5px;
+  padding: 9px 12px;
+  cursor: pointer;
+  border-radius: 7px;
+  overflow-wrap: anywhere;
+}
+.preparation-regions button.selected {
+  background: #e3f3ed;
+  border-color: #5a9f87;
+}
+.preparation-reading {
+  max-height: 500px;
+  overflow: auto;
+  min-width: 0;
+}
+.preparation-reading > div {
+  border-bottom: 1px solid #e3ebe8;
+  padding: 10px 0;
+}
+.preparation-reading img {
+  max-width: 100%;
+  border: 1px solid #e3ebe8;
+  background: white;
+}
+.preparation-reading figure {
+  margin: 16px 0;
+}
+.preparation-panel pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font:
+    13px/1.5 ui-monospace,
+    monospace;
+}
+.preparation-panel > details {
+  margin-top: 14px;
+}

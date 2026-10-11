@@ -4,6 +4,7 @@ pub fn run() {
         .setup(|app| {
             use tauri::Manager;
             app.manage(ai::AiService::new().map_err(|error| std::io::Error::other(error.message))?);
+            app.manage(ocr::OcrService::default());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -13,9 +14,14 @@ pub fn run() {
             ai::run_diagnostic,
             ai::cancel_diagnostic,
             ai::analyze_drawing,
-            ai::save_analysis
+            ai::save_analysis,
+            ocr::ocr_begin,
+            ocr::ocr_image,
+            ocr::ocr_cancel,
+            ocr::ocr_end
         ])
         .run(tauri::generate_context!())
         .expect("could not start AI SKANER");
 }
 mod ai;
+mod ocr;

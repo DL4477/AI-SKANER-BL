@@ -1,0 +1,17 @@
+Local CPU OCR component
+
+RapidOCR, PaddleOCR models, OpenCV, Tesseract and tessdata_fast:
+Apache License 2.0. Upstream repositories:
+https://github.com/RapidAI/RapidOCR
+https://github.com/microsoft/onnxruntime (MIT; see bundled license)
+https://github.com/PaddlePaddle/PaddleOCR
+https://github.com/opencv/opencv
+https://github.com/tesseract-ocr/tesseract
+https://github.com/tesseract-ocr/tessdata_fast
+
+tesserocr: MIT; Windows wheel built by simonflueckiger/tesserocr-windows_build.
+Leptonica: BSD-style license (bundled with Tesseract wheel).
+PyInstaller: GPL with the bootloader exception permitting bundled applications.
+CPython: Python Software Foundation license.
+Other dependency notices and exact versions are collected alongside this file.
+Model file URLs and SHA256 are in ocr-assets/assets.lock.json.

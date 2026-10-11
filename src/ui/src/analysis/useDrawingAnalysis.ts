@@ -3,12 +3,22 @@ import { Channel, invoke } from "@tauri-apps/api/core";
 import { connectionError, modelApi } from "../model/connection";
 import { prepareDrawing } from "./prepareDrawing";
 import type { AnalysisProgress, AnalysisReport, DrawingSource } from "./types";
+import { preparePdf } from "../preparation/prepare";
+import type { PreparedDrawing } from "../preparation/types";
+import { SETTINGS_KEY } from "../preparation/geometry";
 
 export function useDrawingAnalysis(
   log: (message: string) => void,
   onReply: () => void,
 ) {
   const [report, setReport] = useState<AnalysisReport | null>(null);
+  const [prepared, setPrepared] = useState<PreparedDrawing | null>(null);
+  const cache = useRef<{
+    url: string;
+    settings: string;
+    data: PreparedDrawing;
+  } | null>(null);
+  const [localOnly, setLocalOnly] = useState(false);
   const [busy, setBusy] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [progress, setProgress] = useState("");
@@ -36,13 +46,15 @@ export function useDrawingAnalysis(
   function reset() {
     if (job.current) return false;
     setReport(null);
+    setPrepared(null);
+    cache.current = null;
     setError("");
     setProgress("");
     setElapsedSeconds(0);
     return true;
   }
 
-  async function run(source: DrawingSource) {
+  async function run(source: DrawingSource, onlyPrepare = false) {
     if (job.current) return;
     const current = {
       id: crypto.randomUUID(),
@@ -53,18 +65,60 @@ export function useDrawingAnalysis(
     startedAt.current = Date.now();
     setElapsedSeconds(0);
     setBusy(true);
+    setLocalOnly(onlyPrepare);
     setCancelling(false);
     setError("");
     setReport(null);
     setProgress("Подготовка чертежа…");
     log("Начата подготовка чертежа к анализу.");
     try {
-      const pages = await prepareDrawing(
-        source,
-        current.abort.signal,
-        setProgress,
-      );
+      let preparation: PreparedDrawing | null = null;
+      if (source.kind === "pdf") {
+        if (
+          cache.current?.url === source.url &&
+          cache.current.settings === SETTINGS_KEY
+        ) {
+          preparation = cache.current.data;
+          log("Использована локальная подготовка из кэша сеанса.");
+        } else {
+          setPrepared(null);
+          preparation = await preparePdf(
+            source,
+            current.id,
+            current.abort.signal,
+            setProgress,
+            setPrepared,
+          );
+          current.abort.signal.throwIfAborted();
+          cache.current = {
+            url: source.url,
+            settings: SETTINGS_KEY,
+            data: preparation,
+          };
+        }
+        setPrepared(preparation);
+      }
+      const pages =
+        preparation?.pages ??
+        (await prepareDrawing(source, current.abort.signal, setProgress));
       current.abort.signal.throwIfAborted();
+      if (onlyPrepare) {
+        setProgress(
+          `Подготовка завершена · ${pages.length} лист(а). Запросов к Kimi не было.`,
+        );
+        log("PDF подготовлен локально. Результаты OCR доступны для просмотра.");
+        return;
+      }
+      if (preparation) {
+        const size = [...pages, ...preparation.fragments].reduce(
+          (n, p) => n + p.image.length * 0.75,
+          0,
+        );
+        if (size > 20 * 1024 * 1024)
+          throw new Error(
+            "Полный пакет изображений превышает 20 МиБ. Он не усечён и не отправлен в Kimi; подготовленные данные доступны ниже.",
+          );
+      }
       current.sent = true;
       setProgress(
         `Подключение к Kimi · ${pages.length} лист(а). Лимит анализа — 15 минут…`,
@@ -88,7 +142,14 @@ export function useDrawingAnalysis(
       });
       const result = await invoke<AnalysisReport>("analyze_drawing", {
         requestId: current.id,
-        input: { name: source.name, kind: source.kind, pages },
+        input: {
+          name: source.name,
+          kind: source.kind,
+          pages,
+          preparation: preparation
+            ? { ...preparation, pages: undefined }
+            : null,
+        },
         onProgress,
       });
       if (current.abort.signal.aborted || job.current !== current) return;
@@ -131,6 +192,7 @@ export function useDrawingAnalysis(
     if (!current || cancelling) return;
     setCancelling(true);
     current.abort.abort();
+    await invoke("ocr_cancel", { requestId: current.id }).catch(() => {});
     if (current.sent) {
       try {
         await modelApi.cancel(current.id);
@@ -160,6 +222,8 @@ export function useDrawingAnalysis(
 
   return {
     report,
+    prepared,
+    localOnly,
     busy,
     cancelling,
     progress,

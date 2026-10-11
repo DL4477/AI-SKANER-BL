@@ -2,6 +2,7 @@ use super::*;
 
 pub(crate) fn input() -> AnalysisInput {
     AnalysisInput {
+        preparation: None,
         name: "Учебный тест".into(),
         kind: "demo".into(),
         pages: vec![AnalysisPage {
