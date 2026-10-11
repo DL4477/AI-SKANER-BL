@@ -5,6 +5,7 @@ mod error;
 mod kimi;
 mod preparation;
 mod stream;
+pub mod system_prompt;
 mod vault;
 
 use analysis::{AnalysisInput, AnalysisReport};

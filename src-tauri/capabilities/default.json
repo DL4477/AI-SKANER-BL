@@ -11,6 +11,7 @@
     "allow-run-diagnostic",
     "allow-cancel-diagnostic",
     "allow-analyze-drawing",
-    "allow-save-analysis"
+    "allow-save-analysis",
+    "allow-open-system-prompt"
   ]
 }

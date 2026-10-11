@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
+import { connectionError } from "./model/connection";
 import PreparationInspector from "./preparation/PreparationInspector";
 import {
   ArrowDownToLine,
@@ -111,6 +113,7 @@ export default function App() {
   const [journal, setJournal] = useState(false);
   const [error, setError] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [openingPrompt, setOpeningPrompt] = useState(false);
   const [dialog, setDialog] = useState<"settings" | "projects" | "help" | null>(
     null,
   );
@@ -206,6 +209,18 @@ export default function App() {
     );
   }
 
+  async function openSystemPrompt() {
+    if (openingPrompt || !connection.desktopAvailable) return;
+    setOpeningPrompt(true);
+    try {
+      await invoke("open_system_prompt");
+    } catch (failure) {
+      setError(connectionError(failure).message);
+    } finally {
+      setOpeningPrompt(false);
+    }
+  }
+
   return (
     <div className="app-shell">
       <aside className="rail" aria-label="Навигация">
@@ -257,11 +272,33 @@ export default function App() {
             <span className="wordmark-divider" />
             <span className="workspace-label">Рабочее пространство</span>
           </div>
-          <button className="connection" onClick={() => setDialog("settings")}>
-            <span className={`status-dot ${connection.badge.tone}`} />
-            {connection.badge.text}
-            <Settings2 size={15} />
-          </button>
+          <div className="topbar-actions">
+            <button
+              className="button"
+              disabled={openingPrompt || !connection.desktopAvailable}
+              onClick={() => void openSystemPrompt()}
+              title={
+                connection.desktopAvailable
+                  ? "Открыть полный системный промпт в отдельном окне"
+                  : "Доступно в установленном приложении"
+              }
+            >
+              {openingPrompt ? (
+                <LoaderCircle size={16} className="loading-spinner" />
+              ) : (
+                <FileText size={16} />
+              )}
+              Системный промпт
+            </button>
+            <button
+              className="connection"
+              onClick={() => setDialog("settings")}
+            >
+              <span className={`status-dot ${connection.badge.tone}`} />
+              {connection.badge.text}
+              <Settings2 size={15} />
+            </button>
+          </div>
         </header>
         <main>
           <div className="page-heading">
@@ -785,7 +822,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.4.3</span>
+              ИИ СКАНЕР <span className="version">0.4.4</span>
             </span>
           </footer>
         </main>

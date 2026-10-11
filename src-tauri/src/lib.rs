@@ -13,7 +13,9 @@ pub fn run() {
             ai::run_diagnostic,
             ai::cancel_diagnostic,
             ai::analyze_drawing,
-            ai::save_analysis
+            ai::save_analysis,
+            ai::system_prompt::get_system_prompt,
+            ai::system_prompt::open_system_prompt
         ])
         .run(tauri::generate_context!())
         .expect("could not start AI SKANER");

@@ -8,6 +8,8 @@ fn main() {
             "cancel_diagnostic",
             "analyze_drawing",
             "save_analysis",
+            "get_system_prompt",
+            "open_system_prompt",
         ]),
     ))
     .expect("failed to build desktop permissions");

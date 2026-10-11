@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "system-prompt",
+  "description": "The prompt viewer can only read the current drawing analysis system prompt and its public settings.",
+  "windows": ["system-prompt"],
+  "permissions": ["allow-get-system-prompt"]
+}

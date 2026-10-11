@@ -133,6 +133,10 @@ fn request_contains_all_pages_schema_and_no_manual_surface_answers() {
     assert_eq!(request["response_format"]["json_schema"]["strict"], true);
     assert_eq!(request["max_completion_tokens"], 50_000);
     assert_eq!(request["reasoning_effort"], "high");
+    assert_eq!(
+        request["messages"][0]["content"],
+        crate::ai::system_prompt::get_system_prompt().text
+    );
     assert!(!request.to_string().contains("Ø40"));
 }
 

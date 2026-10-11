@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-open-system-prompt"
+description = "Enables the open_system_prompt command without any pre-configured scope."
+commands.allow = ["open_system_prompt"]
+
+[[permission]]
+identifier = "deny-open-system-prompt"
+description = "Denies the open_system_prompt command without any pre-configured scope."
+commands.deny = ["open_system_prompt"]
