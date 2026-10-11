@@ -7,10 +7,17 @@ import {
   type RenderTask,
 } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import type { SourceFocus } from "./analysis/types";
 
 GlobalWorkerOptions.workerSrc = workerUrl;
 
-export default function PdfPreview({ url }: { url: string }) {
+export default function PdfPreview({
+  url,
+  focus,
+}: {
+  url: string;
+  focus?: SourceFocus | null;
+}) {
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [zoom, setZoom] = useState(1);
@@ -19,6 +26,35 @@ export default function PdfPreview({ url }: { url: string }) {
   const [error, setError] = useState("");
   const scrollArea = useRef<HTMLDivElement>(null);
   const output = useRef<HTMLDivElement>(null);
+  const sheet = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!pdf || !focus || focus.page < 1 || focus.page > pdf.numPages) return;
+    setPageNumber(focus.page);
+    if (focus.bbox) setZoom(2.4);
+  }, [focus, pdf]);
+
+  useEffect(() => {
+    const target = sheet.current;
+    const area = scrollArea.current;
+    if (!target || !area) return;
+    if (busy || !focus || focus.page !== pageNumber) return;
+    if (!focus.bbox) {
+      area.scrollTo({ top: 0, left: 0 });
+      return;
+    }
+    const [x1, y1, x2, y2] = focus.bbox;
+    area.scrollTo({
+      left:
+        target.offsetLeft +
+        ((x1 + x2) / 2) * target.clientWidth -
+        area.clientWidth / 2,
+      top:
+        target.offsetTop +
+        ((y1 + y2) / 2) * target.clientHeight -
+        area.clientHeight / 2,
+    });
+  }, [busy, focus, pageNumber, width, zoom]);
 
   useEffect(() => {
     let cancelled = false;
@@ -166,6 +202,12 @@ export default function PdfPreview({ url }: { url: string }) {
           </button>
         </div>
       </div>
+      {focus && (
+        <div className="pdf-source-caption" role="status">
+          Источник: лист {focus.page} · {focus.description}
+          {!focus.bbox ? " · координаты не указаны" : ""}
+        </div>
+      )}
       <div className="pdf-canvas-area" ref={scrollArea} aria-busy={busy}>
         {error ? (
           <div className="pdf-message" role="alert">
@@ -180,9 +222,24 @@ export default function PdfPreview({ url }: { url: string }) {
               </div>
             )}
             <div
-              className={`pdf-canvas-output ${busy ? "rendering" : ""}`}
-              ref={output}
-            />
+              className={`pdf-canvas-sheet ${busy ? "rendering" : ""}`}
+              ref={sheet}
+            >
+              <div className="pdf-canvas-output" ref={output} />
+              {focus?.bbox && focus.page === pageNumber && (
+                <div
+                  className="pdf-source-highlight"
+                  role="img"
+                  aria-label={`Источник: ${focus.description}`}
+                  style={{
+                    left: `${focus.bbox[0] * 100}%`,
+                    top: `${focus.bbox[1] * 100}%`,
+                    width: `${(focus.bbox[2] - focus.bbox[0]) * 100}%`,
+                    height: `${(focus.bbox[3] - focus.bbox[1]) * 100}%`,
+                  }}
+                />
+              )}
+            </div>
           </>
         )}
       </div>

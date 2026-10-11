@@ -1284,16 +1284,130 @@ h4 {
   display: flex;
   align-items: flex-start;
 }
-.pdf-canvas-output {
+.pdf-canvas-sheet {
+  position: relative;
   margin: 0 auto;
   flex-shrink: 0;
+}
+
+.pdf-source-highlight {
+  position: absolute;
+  border: 2px solid #2463e8;
+  background: #3478ff25;
+  pointer-events: none;
+  z-index: 2;
+  min-width: 3px;
+  min-height: 3px;
+}
+.pdf-source-caption {
+  padding: 8px 14px;
+  background: #edf3ff;
+  color: #244374;
+  font-size: 12px;
+  line-height: 1.5;
+  max-height: 70px;
+  overflow: auto;
+}
+.analysis-modes {
+  display: flex;
+  gap: 5px;
+  padding: 12px 0;
+  flex-wrap: wrap;
+}
+.analysis-modes button {
+  padding: 8px 10px;
+  border: 1px solid #d6dfec;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  cursor: pointer;
+}
+.analysis-modes button[aria-pressed="true"] {
+  background: #e8efff;
+  color: #2454bd;
+  border-color: #8babe9;
+}
+.source-link {
+  color: #2458bd;
+  background: none;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  padding: 3px 0;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.observed-label {
+  border-left: 3px solid #c5d5ec;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: #f7f9fd;
+  overflow-wrap: anywhere;
+}
+.observed-label small,
+.observed-label strong {
+  display: block;
+}
+.observed-label small {
+  font-size: 11px;
+  color: #65758d;
+  margin-bottom: 5px;
+}
+.binding-card,
+.fact-card,
+.local-check {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid #dbe2ed;
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.binding-card.disputed,
+.local-check.warning {
+  border-left: 3px solid #c98b3a;
+}
+.local-check.error {
+  border-left: 3px solid #cb4c4c;
+  background: #fff8f8;
+}
+.local-check.not_checkable {
+  border-left: 3px solid #91a0b6;
+}
+.local-check.info {
+  border-left: 3px solid #4c83b2;
+}
+.fact-search {
+  display: block;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.fact-search input {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  border: 1px solid #ccd7e5;
+  padding: 9px;
+  border-radius: 7px;
+}
+.unbound-facts {
+  margin: 12px 0;
+  padding: 10px;
+  background: #fff9ee;
+  border-radius: 7px;
+  font-size: 12px;
+}
+.analysis-data summary {
+  cursor: pointer;
 }
 .pdf-canvas-output canvas {
   display: block;
   box-shadow: 0 2px 12px #26374c18;
   background: #fff;
 }
-.pdf-canvas-output.rendering {
+.pdf-canvas-sheet.rendering {
   display: none;
 }
 .status-dot.success {
@@ -1833,7 +1947,10 @@ h4 {
   resize: none;
   background: white;
   color: #283a51;
-  font: 15px/1.75 "Segoe UI", Arial, sans-serif;
+  font:
+    15px/1.75 "Segoe UI",
+    Arial,
+    sans-serif;
   overflow-y: auto;
 }
 .prompt-text:focus-visible {

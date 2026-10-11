@@ -93,7 +93,15 @@ impl KimiClient {
                 .map_err(|_| analysis_idle_error())?
                 .map_err(analysis_network_error)?;
             let Some(chunk) = chunk else { break };
-            decoder.push(&chunk)?;
+            if let Err(error) = decoder.push(&chunk) {
+                #[cfg(test)]
+                super::acceptance::capture_stream_failure(
+                    &error,
+                    decoder.statistics(),
+                    started.elapsed().as_millis(),
+                );
+                return Err(error);
+            }
             if decoder.phase != last_phase || last_update.elapsed() >= Duration::from_secs(1) {
                 progress(decoder.progress());
                 last_phase = decoder.phase;
@@ -108,11 +116,14 @@ impl KimiClient {
             content_bytes: decoder.progress().content_bytes,
         });
         let value = decoder.finish()?;
+        #[cfg(test)]
+        super::acceptance::capture_response(&value);
         let data = analysis::parse_output(&value, input)?;
         Ok(AnalysisReport {
             data,
             elapsed_ms: started.elapsed().as_millis() as u64,
             total_tokens: value.pointer("/usage/total_tokens").and_then(Value::as_u64),
+            token_usage: value.get("usage").cloned().unwrap_or(Value::Null),
             model: MODEL,
         })
     }
@@ -157,7 +168,7 @@ fn build_http_client(timeout: Duration) -> AiResult<Client> {
         .timeout(timeout)
         .redirect(reqwest::redirect::Policy::none())
         .retry(reqwest::retry::never())
-        .user_agent("AI-SKANER/0.4.4")
+        .user_agent("AI-SKANER/0.5.0")
         .build()
         .map_err(|_| {
             AiError::new(

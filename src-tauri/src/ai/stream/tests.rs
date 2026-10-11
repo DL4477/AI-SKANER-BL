@@ -69,6 +69,46 @@ fn length_finish_survives_for_normal_analysis_validation_and_buffers_are_bounded
             .push(&vec![b'x'; MAX_EVENT_BYTES + 1])
             .unwrap_err()
             .code,
-        "response_too_large"
+        "stream_event_limit"
+    );
+}
+
+#[test]
+fn long_reasoning_wire_does_not_consume_the_final_json_budget() {
+    let mut stream = StreamDecoder::default();
+    let chunk =
+        event(json!({"choices":[{"index":0,"delta":{"reasoning_content":"x".repeat(20_000)}}]}));
+    for _ in 0..450 {
+        stream.push(chunk.as_bytes()).unwrap();
+    }
+    assert!(stream.received > 8 * 1024 * 1024);
+    assert!(stream.content.is_empty());
+    assert!(stream.pending.is_empty());
+    stream
+        .push(
+            format!(
+                "{}data: [DONE]\n\n",
+                event(
+                    json!({"choices":[{"index":0,"delta":{"content":"{}"},"finish_reason":"stop"}]})
+                )
+            )
+            .as_bytes(),
+        )
+        .unwrap();
+    assert_eq!(
+        stream.finish().unwrap()["choices"][0]["message"]["content"],
+        "{}"
+    );
+    let mut oversized = StreamDecoder::default();
+    oversized.received = MAX_STREAM_BYTES;
+    assert_eq!(oversized.push(b" ").unwrap_err().code, "stream_size_limit");
+    let mut content = StreamDecoder::default();
+    let chunk = event(json!({"choices":[{"index":0,"delta":{"content":"x".repeat(200_000)}}]}));
+    for _ in 0..5 {
+        content.push(chunk.as_bytes()).unwrap();
+    }
+    assert_eq!(
+        content.push(chunk.as_bytes()).unwrap_err().code,
+        "analysis_content_limit"
     );
 }

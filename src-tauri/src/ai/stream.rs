@@ -2,9 +2,16 @@ use super::error::{AiError, AiResult};
 use serde::Serialize;
 use serde_json::{Value, json};
 
-const MAX_STREAM_BYTES: usize = 8 * 1024 * 1024;
+// SSE carries repeated JSON envelopes and discarded reasoning, not just final JSON.
+// This is a traffic counter; the entire stream is never buffered in memory.
+const MAX_STREAM_BYTES: usize = 32 * 1024 * 1024;
 const MAX_EVENT_BYTES: usize = 256 * 1024;
 const MAX_CONTENT_BYTES: usize = 1024 * 1024;
+
+#[cfg(test)]
+pub(super) fn limits() -> Value {
+    json!({"wire_bytes":MAX_STREAM_BYTES,"event_bytes":MAX_EVENT_BYTES,"content_bytes":MAX_CONTENT_BYTES})
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -61,7 +68,10 @@ impl StreamDecoder {
     pub fn push(&mut self, bytes: &[u8]) -> AiResult<()> {
         self.received += bytes.len();
         if self.received > MAX_STREAM_BYTES {
-            return Err(too_large());
+            return Err(AiError::new(
+                "stream_size_limit",
+                "Поток Kimi превысил 32 МиБ с учётом служебных данных. Неполный результат не принят.",
+            ));
         }
         self.pending.extend_from_slice(bytes);
         while let Some(end) = self.pending.iter().position(|b| *b == b'\n') {
@@ -80,11 +90,11 @@ impl StreamDecoder {
                 self.event.push('\n');
             }
             if self.event.len() > MAX_EVENT_BYTES {
-                return Err(too_large());
+                return Err(event_too_large());
             }
         }
         if self.pending.len() + self.event.len() > MAX_EVENT_BYTES {
-            return Err(too_large());
+            return Err(event_too_large());
         }
         Ok(())
     }
@@ -140,7 +150,10 @@ impl StreamDecoder {
                 .filter(|s| !s.is_empty())
             {
                 if self.content.len() + content.len() > MAX_CONTENT_BYTES {
-                    return Err(too_large());
+                    return Err(AiError::new(
+                        "analysis_content_limit",
+                        "Итоговый JSON превысил 1 МиБ. Неполный результат не принят.",
+                    ));
                 }
                 self.content.push_str(content);
                 self.phase = AnalysisPhase::Receiving;
@@ -160,12 +173,17 @@ impl StreamDecoder {
             json!({"choices":[{"finish_reason":self.finish_reason,"message":{"content":self.content}}],"usage":self.usage}),
         )
     }
+
+    #[cfg(test)]
+    pub fn statistics(&self) -> Value {
+        json!({"wire_bytes":self.received,"buffered_event_bytes":self.pending.len()+self.event.len(),"content_bytes":self.content.len(),"phase":self.phase})
+    }
 }
 
-fn too_large() -> AiError {
+fn event_too_large() -> AiError {
     AiError::new(
-        "response_too_large",
-        "Ответ анализа превысил допустимый размер. Неполный результат не принят.",
+        "stream_event_limit",
+        "Одна запись потока Kimi превысила 256 КиБ. Неполный результат не принят.",
     )
 }
 

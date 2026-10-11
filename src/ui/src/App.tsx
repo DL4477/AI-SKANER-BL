@@ -28,6 +28,7 @@ import ModelSettings from "./model/ModelSettings";
 import { useModelConnection } from "./model/useModelConnection";
 import { useDrawingAnalysis } from "./analysis/useDrawingAnalysis";
 import AnalysisInspector from "./analysis/AnalysisInspector";
+import type { SourceFocus } from "./analysis/types";
 
 type Surface = {
   id: string;
@@ -108,6 +109,10 @@ export default function App() {
   );
   const [document, setDocument] = useState<LocalDocument | null>(null);
   const [selected, setSelected] = useState("S001");
+  const [sourceFocus, setSourceFocus] = useState<SourceFocus | null>(null);
+  useEffect(() => {
+    setSourceFocus(null);
+  }, [document, analysis.report]);
   const [tab, setTab] = useState<"surfaces" | "general">("surfaces");
   const [zoom, setZoom] = useState(100);
   const [journal, setJournal] = useState(false);
@@ -513,6 +518,19 @@ export default function App() {
                       src="/demo-bushing.svg"
                       alt="Учебный эскиз втулки с наружным диаметром 40, отверстием 20 и длиной 30 миллиметров"
                     />
+                    {analysis.report && sourceFocus?.bbox && (
+                      <div
+                        className="pdf-source-highlight"
+                        role="img"
+                        aria-label={`Источник: ${sourceFocus.description}`}
+                        style={{
+                          left: `${sourceFocus.bbox[0] * 100}%`,
+                          top: `${sourceFocus.bbox[1] * 100}%`,
+                          width: `${(sourceFocus.bbox[2] - sourceFocus.bbox[0]) * 100}%`,
+                          height: `${(sourceFocus.bbox[3] - sourceFocus.bbox[1]) * 100}%`,
+                        }}
+                      />
+                    )}
                     {!analysis.report && (
                       <svg
                         className="drawing-overlay"
@@ -529,7 +547,11 @@ export default function App() {
                     )}
                   </div>
                 ) : (
-                  <PdfPreview key={document.url} url={document.url} />
+                  <PdfPreview
+                    key={document.url}
+                    url={document.url}
+                    focus={sourceFocus}
+                  />
                 )}
                 {dragging && (
                   <div className="drop-overlay">
@@ -600,6 +622,9 @@ export default function App() {
                     key={analysis.report.elapsedMs}
                     data={analysis.report.data}
                     tab={tab}
+                    onSource={(source) =>
+                      setSourceFocus({ ...source, token: performance.now() })
+                    }
                   />
                 ) : !demo ? (
                   <div className="empty-data">
@@ -822,7 +847,7 @@ export default function App() {
                   : "Исходный PDF открыт на этом компьютере"}
             </span>
             <span>
-              ИИ СКАНЕР <span className="version">0.4.4</span>
+              ИИ СКАНЕР <span className="version">0.5.0</span>
             </span>
           </footer>
         </main>

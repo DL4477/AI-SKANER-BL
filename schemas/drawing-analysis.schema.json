@@ -5,15 +5,21 @@
   "properties": {
     "schema_version": {
       "type": "string",
-      "enum": ["0.1.0-draft"]
+      "enum": [
+        "0.2.0-draft"
+      ]
     },
     "status": {
       "type": "string",
-      "enum": ["needs_review"]
+      "enum": [
+        "needs_review"
+      ]
     },
     "ready_for_3d": {
       "type": "boolean",
-      "enum": [false]
+      "enum": [
+        false
+      ]
     },
     "source": {
       "type": "object",
@@ -29,29 +35,48 @@
         },
         "kind": {
           "type": "string",
-          "enum": ["pdf", "demo"]
+          "enum": [
+            "pdf",
+            "demo"
+          ]
         }
       },
-      "required": ["name", "page_count", "kind"],
+      "required": [
+        "name",
+        "page_count",
+        "kind"
+      ],
       "additionalProperties": false
     },
     "drawing_general": {
       "type": "object",
       "properties": {
         "part_name": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 200
         },
         "designation": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 200
         },
         "material": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 500
         },
         "units": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 80
         },
         "notes": {
@@ -62,12 +87,14 @@
           },
           "maxItems": 80
         },
-        "general_requirements": {
+        "general_requirement_ids": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/requirement"
+            "type": "string",
+            "maxLength": 80
           },
-          "maxItems": 100
+          "maxItems": 200,
+          "minItems": 0
         }
       },
       "required": [
@@ -76,7 +103,7 @@
         "material",
         "units",
         "notes",
-        "general_requirements"
+        "general_requirement_ids"
       ],
       "additionalProperties": false
     },
@@ -98,6 +125,81 @@
     "summary": {
       "type": "string",
       "maxLength": 3000
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/view"
+      },
+      "maxItems": 80,
+      "minItems": 0
+    },
+    "observations": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/observation"
+      },
+      "maxItems": 600,
+      "minItems": 0
+    },
+    "dimensions": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/dimension"
+      },
+      "maxItems": 400,
+      "minItems": 0
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/requirement"
+      },
+      "maxItems": 300,
+      "minItems": 0
+    },
+    "bindings": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/binding"
+      },
+      "maxItems": 600,
+      "minItems": 0
+    },
+    "dimension_chains": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/chain"
+      },
+      "maxItems": 100,
+      "minItems": 0
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "engine_version": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "checks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/check"
+          },
+          "maxItems": 5000,
+          "minItems": 0
+        },
+        "scope": {
+          "type": "string",
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "engine_version",
+        "checks",
+        "scope"
+      ],
+      "additionalProperties": false
     }
   },
   "required": [
@@ -108,7 +210,14 @@
     "drawing_general",
     "surfaces",
     "questions",
-    "summary"
+    "summary",
+    "views",
+    "observations",
+    "dimensions",
+    "requirements",
+    "bindings",
+    "dimension_chains",
+    "validation"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -125,7 +234,10 @@
           "maxLength": 1000
         },
         "bbox": {
-          "type": ["array", "null"],
+          "type": [
+            "array",
+            "null"
+          ],
           "items": {
             "type": "number",
             "minimum": 0,
@@ -135,7 +247,238 @@
           "maxItems": 4
         }
       },
-      "required": ["page", "description", "bbox"],
+      "required": [
+        "page",
+        "description",
+        "bbox"
+      ],
+      "additionalProperties": false
+    },
+    "view": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "main",
+            "projection",
+            "section",
+            "detail",
+            "unknown"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "maxItems": 16,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "kind",
+        "description",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "observation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "raw_text": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "dimension",
+            "requirement",
+            "note",
+            "symbol",
+            "label",
+            "unknown"
+          ]
+        },
+        "view_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 80
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "maxItems": 8,
+          "minItems": 0
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          },
+          "maxItems": 16,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "id",
+        "raw_text",
+        "kind",
+        "view_id",
+        "alternatives",
+        "evidence"
+      ],
+      "additionalProperties": false
+    },
+    "term": {
+      "type": "object",
+      "properties": {
+        "dimension_id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "coefficient": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "dimension_id",
+        "coefficient"
+      ],
+      "additionalProperties": false
+    },
+    "dimension": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "observation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "maxItems": 200,
+          "minItems": 0
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "value": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 80
+        },
+        "designation": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 300
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "read",
+            "derived",
+            "assumed",
+            "unknown"
+          ]
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "diameter",
+            "radius",
+            "axial_length",
+            "transverse_distance",
+            "center_distance",
+            "hole_depth",
+            "thread_depth",
+            "angle",
+            "other",
+            "unknown"
+          ]
+        },
+        "axis": {
+          "type": "string",
+          "enum": [
+            "axial",
+            "transverse",
+            "radial",
+            "angular",
+            "unknown"
+          ]
+        },
+        "reference_description": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "derived_from": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/term"
+          },
+          "maxItems": 30,
+          "minItems": 0
+        },
+        "derivation_note": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        }
+      },
+      "required": [
+        "id",
+        "observation_ids",
+        "name",
+        "value",
+        "unit",
+        "designation",
+        "basis",
+        "role",
+        "axis",
+        "reference_description",
+        "derived_from",
+        "derivation_note"
+      ],
       "additionalProperties": false
     },
     "requirement": {
@@ -162,26 +505,53 @@
           "maxLength": 2000
         },
         "value": {
-          "type": ["number", "null"]
+          "type": [
+            "number",
+            "null"
+          ]
         },
         "unit": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 80
         },
         "it_grade": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 32
         },
-        "applies_to": {
+        "observation_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "maxItems": 200,
+          "minItems": 0
+        },
+        "scope": {
+          "type": "string",
+          "enum": [
+            "general",
+            "local",
+            "unknown"
+          ]
+        },
+        "scope_description": {
           "type": "string",
           "maxLength": 1000
         },
-        "evidence": {
+        "dimension_ids": {
           "type": "array",
           "items": {
-            "$ref": "#/$defs/evidence"
+            "type": "string",
+            "maxLength": 80
           },
-          "maxItems": 16
+          "maxItems": 200
         }
       },
       "required": [
@@ -191,34 +561,70 @@
         "value",
         "unit",
         "it_grade",
-        "applies_to",
-        "evidence"
+        "observation_ids",
+        "scope",
+        "scope_description",
+        "dimension_ids"
       ],
       "additionalProperties": false
     },
-    "parameter": {
+    "binding": {
       "type": "object",
       "properties": {
-        "name": {
+        "id": {
           "type": "string",
-          "maxLength": 160
-        },
-        "value": {
-          "type": ["number", "null"]
-        },
-        "unit": {
-          "type": ["string", "null"],
           "maxLength": 80
         },
-        "designation": {
-          "type": ["string", "null"],
-          "maxLength": 300
-        },
-        "basis": {
+        "fact_id": {
           "type": "string",
-          "enum": ["read", "derived", "unknown"]
+          "maxLength": 80
         },
-        "evidence": {
+        "surface_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "maxItems": 200,
+          "minItems": 0
+        },
+        "property": {
+          "type": "string",
+          "enum": [
+            "diameter",
+            "radius",
+            "axial_length",
+            "transverse_distance",
+            "center_distance",
+            "hole_depth",
+            "thread_depth",
+            "angle",
+            "other",
+            "unknown",
+            "technical_requirement"
+          ]
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "proposed",
+            "disputed"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "alternatives": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 1000
+          },
+          "maxItems": 12,
+          "minItems": 0
+        },
+        "target_evidence": {
           "type": "array",
           "items": {
             "$ref": "#/$defs/evidence"
@@ -226,7 +632,16 @@
           "maxItems": 16
         }
       },
-      "required": ["name", "value", "unit", "designation", "basis", "evidence"],
+      "required": [
+        "id",
+        "fact_id",
+        "surface_ids",
+        "property",
+        "status",
+        "rationale",
+        "alternatives",
+        "target_evidence"
+      ],
       "additionalProperties": false
     },
     "surface": {
@@ -255,33 +670,18 @@
         },
         "orientation": {
           "type": "string",
-          "enum": ["outward", "inward", "unknown"]
-        },
-        "geometry_parameters": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/parameter"
-          },
-          "maxItems": 40
+          "enum": [
+            "outward",
+            "inward",
+            "unknown"
+          ]
         },
         "boundary_description": {
-          "type": ["string", "null"],
+          "type": [
+            "string",
+            "null"
+          ],
           "maxLength": 2000
-        },
-        "local_requirements": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/requirement"
-          },
-          "maxItems": 80
-        },
-        "general_requirement_ids": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "maxLength": 80
-          },
-          "maxItems": 80
         },
         "evidence": {
           "type": "array",
@@ -298,6 +698,23 @@
             "maxLength": 2000
           },
           "maxItems": 30
+        },
+        "physical_role": {
+          "type": "string",
+          "enum": [
+            "cylindrical_side",
+            "end_face",
+            "shoulder_face",
+            "slot_wall",
+            "slot_floor",
+            "hole_wall",
+            "hole_bottom",
+            "chamfer",
+            "fillet",
+            "groove",
+            "other",
+            "unknown"
+          ]
         }
       },
       "required": [
@@ -305,12 +722,80 @@
         "name",
         "type",
         "orientation",
-        "geometry_parameters",
         "boundary_description",
-        "local_requirements",
-        "general_requirement_ids",
         "evidence",
-        "uncertainties"
+        "uncertainties",
+        "physical_role"
+      ],
+      "additionalProperties": false
+    },
+    "chain": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "total_dimension_id": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/term"
+          },
+          "maxItems": 40,
+          "minItems": 1
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1500
+        }
+      },
+      "required": [
+        "id",
+        "total_dimension_id",
+        "terms",
+        "description"
+      ],
+      "additionalProperties": false
+    },
+    "check": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "severity": {
+          "type": "string",
+          "enum": [
+            "error",
+            "warning",
+            "not_checkable",
+            "info"
+          ]
+        },
+        "entity_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "maxItems": 200,
+          "minItems": 0
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 2000
+        }
+      },
+      "required": [
+        "code",
+        "severity",
+        "entity_ids",
+        "message"
       ],
       "additionalProperties": false
     }

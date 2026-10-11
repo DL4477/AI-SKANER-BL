@@ -1,6 +1,6 @@
 [package]
 name = "ai-skaner"
-version = "0.4.4"
+version = "0.5.0"
 description = "Local workspace for engineering PDF drawings"
 repository = "https://github.com/DL4477/AI-SKANER-BL"
 edition = "2024"
